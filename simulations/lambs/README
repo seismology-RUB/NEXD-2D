@@ -1,0 +1,5 @@
+How to run a simulation:
+1) Create a mesh with Trelis/Cubit (cubit/lambs.jou)
+2) Prepare mesh for dg2d using the python script (cubit/run_cubit.py)
+3) Perform preprocessing (process.sh)
+4) Run solver using script (run.csh)

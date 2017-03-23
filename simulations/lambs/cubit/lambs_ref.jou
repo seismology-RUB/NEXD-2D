@@ -1,0 +1,53 @@
+reset
+
+###################################
+#model
+create vertex 0 0 0 
+create vertex 4000 0 0 
+create vertex 4000 2705.31 0 
+create vertex 0 2000 0 
+create surface vertex 1 2 3 4  
+#create surf vertex 4 3 2 1
+
+###################################
+#pml
+
+###################################
+#meshing
+
+imprint all
+merge all
+surface all scheme TriDelaunay
+vol all size 50
+#curve 2 4 size 66
+#curve 1 3 size 80
+mesh surface 1
+
+
+
+
+###################################
+# materials
+Set Duplicate Block Elements on
+
+block 1 tri in surf 1
+
+# name nr vp vs rho qp qs
+block 1 name "elastic 1 3200 1847.5 2200 9999 9999"
+
+#edges
+nodeset 1 node in curve 3
+nodeset 2 node in curve  1 4 2 
+
+nodeset 1 name "free_surf"
+nodeset 2 name "absorb"
+
+save as "testtri.cub" overwrite
+
+
+
+
+
+
+
+

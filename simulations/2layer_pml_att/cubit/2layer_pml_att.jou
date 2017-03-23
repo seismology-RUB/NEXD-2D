@@ -1,0 +1,65 @@
+reset
+
+###################################
+#model
+
+create surface rectangle width 50 height 50 zplane
+webcut volume 1 with plane normal to curve 4 fraction 0.5
+move surface all x 25 y 25 z 0 include_merged
+
+###################################
+#pml
+
+webcut volume all with plane normal to curve 1 distance 5 from vertex 2
+webcut volume all with plane normal to curve 9 distance 5 from vertex 3
+webcut volume all with plane normal to curve 16 distance 5 from vertex 1
+
+###################################
+#meshing
+
+imprint all
+merge all
+surf all size 1
+surface all scheme TriDelaunay
+mesh surface all
+
+###################################
+# materials
+set duplicate block elements on
+
+block 1 tri in surf 4 13 12 
+block 2 tri in surf 9 16 17 8 14 15 
+
+# name nr vp vs rho qp qs
+block 1 name "elastic 1 3000 2200 2000 10 10"
+block 2 name "elastic 2 5000 3200 3000 9999 9999"
+
+
+###################################
+#boundaries
+#1=left 2= bottom 3=right  4=top 5=bl 6=br 7=tr 8=tl
+block 3 tri in surf 9 4  #left
+block 4 tri in surf 14 #bottom
+block 5 tri in surf 13 17 # right
+block 6 tri in surf 8 #bl
+block 7 tri in surf 15 #br
+
+block 3 name "pml 1"
+block 4 name "pml 2"
+block 5 name "pml 3"
+block 6 name "pml 5"
+block 7 name "pml 6"
+
+#edges
+nodeset 1 node in curve 12 36 40 
+nodeset 2 node in curve 7 28 24 19 43 45 31 33 6 
+#nodeset 1 node in curve 12 7 28 24 19 43 45 31 33 6 36 40 
+#nodeset 2 node in curve
+
+nodeset 1 name "free_surf"
+nodeset 2 name "absorb"
+
+save as "testtri.cub" overwrite
+
+
+

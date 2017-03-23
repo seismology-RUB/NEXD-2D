@@ -1,0 +1,15 @@
+analytical solution:
+Ux_file_ascii_rec1
+Ux_file_ascii_rec2
+Uz_file_ascii_rec1
+Uz_file_ascii_rec2
+Vx_file_ascii_rec1
+Vx_file_ascii_rec2
+Vz_file_ascii_rec1
+Vz_file_ascii_rec2
+
+SPECFEM:
+S0001.AA.BXX.semd
+S0001.AA.BXZ.semd
+S0002.AA.BXX.semd
+S0002.AA.BXZ.semd
