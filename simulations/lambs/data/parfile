@@ -3,16 +3,10 @@
 # Title of the simulation
 title                   = lambs
 
-# use strong or weak form?
-strongform              = .true.            # strong or weak form of DG
+# Choose the way in which the flux is calculated 
+fluxtype                = 1                 # "0" Pre-calculated flux (only for elastic simulations), "1" existing methods
 
-# adjoint
-save_forward            = .false.           # save the forward wave field (big files!!!)
-adjoint                 = .false.           # compute adjoint kernels
-inv_model               = .false.           # use updated model? 
-adj_nstep               = 20                # nsteps for writing and reading the wavefield in adjoint simulations
-
-# Convinience Parameters
+# Convenience Parameters
 log                     = .true.            # "true" if log should be displayed on screen, otherwise "false"
 debug                   = .true.            # Parameter to enable certain output for debugging purposes
 
@@ -23,6 +17,17 @@ nproc                   = 8                 # depending on setup (currently max 
 externalfilename        = cold_flach2.grd   # File containing the external model
 extvel                  = .false.           # "true" if external velocity model should be loaded, otherwise "false"
 
+# Parameters regarding seismograms
+autoshift               = .true.            # Corrects for the "width" of the used wavelet. For a Ricker or Gaussian the maximum will be at t=0. If set to .false plott0 is used instead.
+plott0                  = 0.                # Offset for the seismogram. Default is 0.
+div                     = .false.           # "true" if the radial component of the seimogram is to be calculated, otherwise false
+curl                    = .false.           # "true" if the tangential component of the seimogram is to be calculated, otherwise false
+
+# Fracture parameters
+lsi                     = .false.           # "true" if slip interface influence is to be calculated, otherwise "false"
+normal                  = .true.            # Jump for P-Waves
+tangential              = .true.            # Jump for SV-Waves
+
 # Movie parameters
 movie                   = .true.            # if "true" the a movie is created, otherwise "false"
 frame                   = 100               # Number of time steps for each frame of the movie
@@ -31,13 +36,9 @@ save_movie_points       = .true.            # Create files with data for each po
 save_movie_displacement = .true.            # Plot displacement field
 save_movie_velocity     = .true.            # Plot velocity field
 save_movie_stress       = .true.            # Plot stress field
-save_movie_p1           = .false.           # Plot pressure of the first fluid
-save_movie_q1           = .false.           # Plot velocity of the first fluid
-save_movie_p2           = .false.           # Plot pressure of the second fluid
-save_movie_q2           = .false.           # Plot velocity of the second fluid
 
 # Parameters for Timeintegration
-timeint                 = 2                 # which timeintegration? 1:euler 2:rk2 3:rk3
+timeint                 = 2                 # which timeintegration?  1:euler 2:rk2 (TVD) 3:rk3 (TVD) 4:rk4 (LSERK)
 nt                      = 7000              # Number of timesteps
 autodt                  = .true.            # automatic calculation of dt
 dt                      = 0.0               # if autodt = .false. choose dt manually
@@ -45,10 +46,6 @@ cfl                     = 0.4               # cfl value for dt
 
 # pmlparameters
 set_pml                 = .false.           # if "true" pml are set else absorbing boundary conditions are set
-xmin                    = 0.0               # pml bounding box
-xmax                    = 80.0              # pml bounding box
-zmin                    = 0.0               # pml bounding box
-zmax                    = 64.0              # pml bounding box
 pml_delta               = 2.0               # pml thickness
 pml_rc                  = 0.001             # pml reclection coff
 pml_kmax                = 1.0               # pml kmax
@@ -60,8 +57,9 @@ sta_lta_trigger         = 0.1               # threshold
 
 # attenuation
 attenuation             = .false.           # "true" to enable attenuation otherwise .false.
-f0_att                  = 14.5              # frequency for anelastic modulus def:500
-fr_att                  = 4.2               # lower freq bound f0/3.4? def:144
+f0_att                  = 43.5               # Frequency where the model parameters are applied
+f_max_att               = 43.5              # maximum of frequency band for anelastic modulus
+att_factor              = 100.              # factor to define minimum frequency, f_min_att=f_max_att/att_factor
 
 #receiver
 rec_angle               = 0.0               # rotate receivers about dregree

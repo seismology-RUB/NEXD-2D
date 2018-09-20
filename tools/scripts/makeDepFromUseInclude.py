@@ -1,22 +1,24 @@
 #!/usr/bin/env python
-#--------------------------------------------------------------------------
-#   Copyright 2013 Wolfgang Friederich
+
+#-----------------------------------------------------------------------
+#   Copyright 2013 Wolfgang Friederich (Ruhr-Universitaet Bochum, GER)
 #
 #   This file is part of NEXD 2D.
 #
-#   NEXD 2D is free software: you can redistribute it and/or modify it 
-#   under the terms of the GNU General Public License as published by the 
-#   Free Software Foundation, either version 3 of the License, or (at your 
-#   option) any later version.
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
 #
-#   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-#   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#   FITNESS FOR A PARTICULAR PURPOSE. 
-#   See the GNU General Public License for more details.
+#   This program is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#   GNU General Public License for more details.
 #
-#   You should have received a copy of the GNU General Public License v3.0
+#   You should have received a copy of the GNU General Public License
 #   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-#--------------------------------------------------------------------------
+#-----------------------------------------------------------------------
+
 #-----------------------------------------------------------
 #  Python module to create dependencies from use and include
 #  statements in Fortran programs
@@ -24,7 +26,7 @@
 #  Usage: makeDepFromUseInclude [[dir] [dir]....]
 #
 #  Search all f90 files in . and given directories and
-#  create a list of 
+#  create a list of
 #  basename.o: deps.o lines
 #  to be included into a Makefile
 #-----------------------------------------------------------
@@ -35,7 +37,7 @@ import os.path
 #-----------------------------------------------------------
 def search_text_file(datei, pattern):
     """ Search each line of a text file for a pattern.
-    
+
     Start searching at the beginning of the line.
     Returns the group(1) match.
     """
@@ -50,7 +52,7 @@ def search_text_file(datei, pattern):
 #-----------------------------------------------------------
 def build_makefile_entry(datei, matchlist, depext):
     """Build a makefile entry.
-    
+
     Form: datei_without_path_and_extension.o: dependencies.
     matchlist: list of dependencies
     depext: extension to be appended to the dependencies

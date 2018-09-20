@@ -1,0 +1,40 @@
+\chapter{Introduction}
+\label{introduction} % Always give a unique label
+% use \chaptermark{}
+% to alter or adjust the chapter heading in the running head
+
+This manual describes NEXD 2D (\textbf{N}odal \textbf{D}iscontinuous \textbf{G}alerkin Finite \textbf{E}lement in \textbf{X} \textbf{D}imensions) version 0.2. NEXD is a Fortran based implementation of the nodal version of the discontinuous Galerkin approach. It is designed to simulate seismic wave propagation in complex geological structures with general physical properties and is not restricted with regard to the size of the model. The programs are currently designed to work on CPUs, only. GPUs are not supported. To run the code, no programming knowledge is required.     
+\section{Supplied programs}
+	The following programs are part of the software package NEXD 2D:
+	\begin{itemize}
+		\item "mesher": The pre-processor designed to read in specific files related to the mesh (see chapter \ref{chap:input}).
+		\item "solver": The main program to simulate the wave-propagation.
+		\item "movie": A post-processor to generate files that show the wave-field at certain time steps.
+	\end{itemize}
+\section{Functionality}
+\label{functions and applications}
+	\subsection{General features}    
+    As of release version v0.2 the following features are included:
+    \begin{itemize}
+        \item Forward simulation of wave-propagation in elastic and anelastic media
+        \item Wave-propagation across fractures (elastic media only)
+    \end{itemize}
+    Since no restrictions are imposed on size and shape of the media of interest, NEXD can be used in any situation, where the propagation of elastic waves is the key information. It is able to yield the wave field at every time step of propagating waves and the output of simulated receivers. Free surface and absorbing boundary conditions (BC) are implemented. In addition, Perfectly Matched Layers (PML) \citep{Lambrecht.2017} are available to enhance the absorbing BC.
+    \subsection{Source time functions}  
+    A number of pre-defined source time functions are supported:
+    \begin{itemize}
+        \item Gauss
+        \item Ricker
+        \item cubed-sine ($sin^3$)
+        \item an arbitrary discrete wavelet
+    \end{itemize}       
+    With sufficient programming knowledge, it is possible to add new wavelet types to the program. Appendix~\ref{sec:srcCode} explains how to do that.   
+      
+    \subsection{Output}
+    As possible output, the program generates seismograms from the data recorded at the stations placed in the model. Additionally, binary files for desired fields (velocity, displacement or stress) are created according to the parameters set in the parfile (see section~\ref{subsec:parfile} and chapter~\ref{chap:output} for details).
+			     
+\section{License}
+NEXD is designed and developed by Lasse Lambrecht, Andre Lamert, Wolfgang Friederich, Thomas M{\"o}ller and Marc S. Boxberg. NEXD 2D and its components, as well as documentation and some examples, are available under terms of the GNU General Public License (version 3 or higher).
+
+\section{Citation}
+Please cite \cite{Lambrecht.2017} if you use NEXD. If you use the feature to simulate the effect of fractures please cite \cite{moeller.2018}.

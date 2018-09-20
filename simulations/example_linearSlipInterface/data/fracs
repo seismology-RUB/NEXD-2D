@@ -1,0 +1,7 @@
+# This input file defines the start and end points of crack in the medium. 
+# The first entry is the total number of cracks. Other values are:
+# No. | Property index | Start x | Start y | End x | End y
+BEGIN
+1
+001   1   0.0000   25.0   50.0   25.
+END 

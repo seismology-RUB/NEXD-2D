@@ -1,18 +1,55 @@
-*.[oa]
+#-----------------------------------------------------------------------
+#   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+#   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+#
+#   This file is part of NEXD 2D.
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
+#-----------------------------------------------------------------------
+
 *~
-*.jou
-.project
+
+# Files created by the compiler (Fortran)
+*.[oa]
 *.mod
+bin/*
+make.incdep
+
+# Python
+*.py[cod]
+
+# Editor files
+.project
+
+# Project files / output files
+*.jou
 *.vtk
 *.bin
 *seismo*
 *run.csh.*
 *cub*
 *log
-bin/*
 simulations/*/out/*
 simulations/*/bin/*
-make.incdep
+
+# dg2ssa
+tools/dg2ssa/Makefile
+tools/dg2ssa/dg2ssa.f90
+
+# Metis
 metis-4.0.3/Graphs/mtest
 metis-4.0.3/graphchk
 metis-4.0.3/kmetis
@@ -23,3 +60,30 @@ metis-4.0.3/onmetis
 metis-4.0.3/partdmesh
 metis-4.0.3/partnmesh
 metis-4.0.3/pmetis
+
+# LaTeX auxilliary files
+*.aux
+*.glo
+*.idx
+*.log
+*.toc
+*.ist
+*.acn
+*.acr
+*.alg
+*.bbl
+*.blg
+*.dvi
+*.glg
+*.gls
+*.ilg
+*.ind
+*.lof
+*.lot
+*.maf
+*.mtc
+*.mtc1
+*.out
+*.synctex.gz
+*.tdo
+

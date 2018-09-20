@@ -1,0 +1,65 @@
+% NEXD Manual %
+\documentclass[a4paper]{book}
+\usepackage{graphicx}
+\graphicspath{{images/}}
+\usepackage{listings}
+\usepackage{color}
+%\usepackage[colorinlistoftodos, shadow]{todonotes}
+\usepackage{amsmath}
+\usepackage{nameref}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage[left=2.5cm,right=2.5cm,top=2cm,bottom=2cm,includeheadfoot]{geometry}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage[round, authoryear, semicolon]{natbib}
+\bibliographystyle{apalike}
+\usepackage{subfig}
+\usepackage[edges]{forest}
+\usepackage{scrextend}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{calc}
+\usepackage{gensymb}
+
+\input{utilities}
+\input{title_page/title_page_cmds}
+
+
+\begin{document}
+\include{title_page/title_page}
+
+\pagestyle{headings}
+
+\frontmatter
+\pagenumbering{Roman}
+\newpage
+\tableofcontents
+
+\mainmatter
+\newpage
+\include{1_Introduction}
+\include{2_Installation}
+\include{3_Input}
+\include{4_Output}
+
+\include{6_Simulation}
+\include{7_Contact_and_Support}
+%\include{8_References}
+\include{9_Licences}
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliography{bibliography/manual_bib} 
+\begin{appendix}
+	\include{5_Model}
+	\include{addSTF}
+\end{appendix}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
+
+
+
+
+

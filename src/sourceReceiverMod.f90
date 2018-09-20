@@ -1,24 +1,24 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
-!   Copyright 2014-2017 Marc S. Boxberg (Ruhr-Universitaet Bochum, Germany)
-!   Copyright 2014-2017 Thomas Möller (Ruhr-Universitaet Bochum, Germany)
-!   Copyright 2015-2017 Andre Lamert (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module sourceReceiverMod
     use constantsMod
     use parameterMod
@@ -38,7 +38,7 @@ module sourceReceiverMod
         integer, dimension(:), pointer :: srcelem => null()                       !Element in which the source is located
         integer, dimension(:), pointer :: srci => null()                          !Source number
         integer, dimension(:), pointer :: srctype => null()                       !Type of source: 1 = Moment tensor, 0 = single force
-        integer, dimension(:), pointer :: srcstf => null()                        !Type of source-time-function: 1 = green, 2 = ricker, 3 = sin^3, 4 = external
+        integer, dimension(:), pointer :: srcstf => null()                        !Type of source-time-function: 1 = gauss, 2 = ricker, 3 = sin^3, 4 = external
         character(len=80), dimension(:), pointer :: extwavelet => null()          !File with external source wavelet
         real(kind=CUSTOM_REAL), dimension(:), pointer :: srcf0 => null()          !Center frequency of sft
         real(kind=CUSTOM_REAL), dimension(:), pointer :: srcfactor => null()      !Factor of the sft
@@ -58,28 +58,31 @@ module sourceReceiverMod
 
     contains
 
-    subroutine initSource(par,this, errmsg)
+    subroutine initSource(par,this, coord, errmsg)
         !subroutine to read the source parameters from the corrosponding file.
         type(error_message) :: errmsg
         type (srcVar) :: this
         type (parameterVar) :: par
+        real(kind=custom_real), dimension(:,:) :: coord
         !local variables
         character(len=80) :: filename
         character(len=10) :: myname = "initSource"
+
         integer :: ier, isrc, pos
+        logical :: file_exists
 
         call addTrace(errmsg, myname)
 
         filename=trim('data/source')
         open(unit=19, file=trim(filename), status='old', action='read', iostat=ier)
         if (ier /= 0) then
-            call add(errmsg,2,'Could not open file: '//trim(filename),myname)
+            call add(errmsg,2,'Could not open file!',myname,filename)
             call print(errmsg)
             stop
         endif
 
         !Cycle to read the parameters form the source file. The order of appearence of the parameters is not important
-        call readIntPar(this%nsrc, "nsrc", filename, 0)
+        call readIntPar(this%nsrc, "nsrc", filename, 0, errmsg)
         allocate(this%srctype(this%nsrc))
         allocate(this%srcxz(2,this%nsrc))
         allocate(this%srcrs(2,this%nsrc))
@@ -93,43 +96,64 @@ module sourceReceiverMod
         allocate(this%srcelem(this%nsrc))
         allocate(this%delay(this%nsrc))
 
-        do isrc = 1, this%nsrc
-            pos = setFilePosition("source", filename, isrc)
+        if (par%log) then
+            write (*, "(a80)") "|------------------------------------------------------------------------------|"
+            write (*,"(a40, i10, a30)")   "|                    Number of sources: ", this%nsrc, "                             |"
+            write (*, "(a80)") "|------------------------------------------------------------------------------|"
+        end if
 
-            call readIntPar(this%srctype(isrc), "sourcetype", filename, pos)
-            call readIntPar(this%srcstf(isrc), "stf", filename, pos)
-            call readStringPar(this%extwavelet(isrc), "extwavelet", filename, pos)
-            call readFloatPar(this%srcxz(1, isrc), "xsource", filename, pos)
-            call readFloatPar(this%srcxz(2, isrc), "zsource", filename, pos)
-            call readFloatPar(this%srcf0(isrc), "f0", filename, pos)
-            call readFloatPar(this%srcfactor(isrc), "factor", filename, pos)
-            call readFloatPar(this%srcangle_force(isrc), "angle_force", filename, pos)
-            call readFloatPar(this%srcM(1, isrc), "Mxx", filename, pos)
-            call readFloatPar(this%srcM(2, isrc), "Mzz", filename, pos)
-            call readFloatPar(this%srcM(3, isrc), "Mxz", filename, pos)
-            call readFloatPar(this%delay(isrc), "delay", filename, pos)
-            if (is_iostat_end(ier)) exit
+        do isrc = 1, this%nsrc
+            pos = setFilePosition("source", filename, isrc, errmsg)
+            call readIntPar(this%srctype(isrc), "sourcetype", filename, pos, errmsg)
+            if (this%srctype(isrc) == 0 .or. this%srctype(isrc) == 1) then
+                continue
+            else
+                call add(errmsg, 2, "Parameter to select the source type is out of range. Select either 0 or 1.", myname, filename)
+            end if
+            call readIntPar(this%srcstf(isrc), "stf", filename, pos, errmsg)
+            if( this%srcstf(isrc) < 1 .or. this%srcstf(isrc) > 4) then
+                !this message needs to be adjusted if new wavelets are added to the Program
+                call add(errmsg, 2, "Parameter to select the source time function is out of range. Select either 1, 2, 3 or 4.", myname, filename)
+            end if
+            if (this%srcstf(isrc) == 4) then
+                call readStringPar(this%extwavelet(isrc), "extwavelet", filename, pos, errmsg)
+                inquire(file=trim(this%extwavelet(isrc)), exist=file_exists)
+                if (.not. file_exists) then
+                    call add(errmsg, 2, "File does not exist!", myname, filename)
+                end if
+            end if
+            call readFloatPar(this%srcxz(1, isrc), "xsource", filename, pos, errmsg)
+            call readFloatPar(this%srcxz(2, isrc), "zsource", filename, pos, errmsg)
+            call modelConflict(this%srcxz(1, isrc), "xsource", minval(coord(1,:)), minval(coord(2,:)), maxval(coord(1,:)), maxval(coord(2,:)), myname, filename, errmsg)
+            call modelConflict(this%srcxz(2, isrc), "zsource", minval(coord(1,:)), minval(coord(2,:)), maxval(coord(1,:)), maxval(coord(2,:)), myname, filename, errmsg)
+            call readFloatPar(this%srcf0(isrc), "f0", filename, pos, errmsg)
+            call readFloatPar(this%srcfactor(isrc), "factor", filename, pos, errmsg)
+            call readFloatPar(this%srcangle_force(isrc), "angle_force", filename, pos, errmsg)
+            call readFloatPar(this%srcM(1, isrc), "Mxx", filename, pos, errmsg)
+            call readFloatPar(this%srcM(2, isrc), "Mzz", filename, pos, errmsg)
+            call readFloatPar(this%srcM(3, isrc), "Mxz", filename, pos, errmsg)
+            call readFloatPar(this%delay(isrc), "delay", filename, pos, errmsg)
         enddo
         close(19)
 
+
+
         if (par%log) then
-            write (*, "(a80)") "--------------------------------------------------------------------------------"
-            write (*,"(a40, i10, a30)")   "|                    Number of sources: ", this%nsrc, "                             |"
-            write (*, "(a80)") "--------------------------------------------------------------------------------"
             do isrc = 1, this%nsrc
                 write (*,"(a40, f10.2, a30)")&
                "|                X-value of the source: ", this%srcxz(1, isrc), "                             |"
                 write (*,"(a40, f10.2, a30)")&
                "|                Z-value of the source: ", this%srcxz(2, isrc), "                             |"
-                write (*,"(a40, es10.4, a30)")&
+                write (*,"(a40, es10.3, a30)")&
                "|                           time delay: ", this%delay(isrc), "                             |"
-
                 write (*,"(a40, i10, a30)")&
                "|                       Type of source: ", this%srctype(isrc), "                             |"
                 write (*,"(a40, i10, a30)")&
                "|           source-time-function (stf): ", this%srcstf(isrc), "                             |"
-                write (*,"(a40, a38, a2)")&
-               "|      file with external sourcewavlet: ", this%extwavelet(isrc), " |"
+                if (this%srcstf(isrc) == 4) then
+                    write (*,"(a40, a38, a2)")&
+                    "|      file with external sourcewavlet: ", this%extwavelet(isrc), " |"
+                end if
                 write (*,"(a40, f10.1, a30)")&
                "|               Centerfrequency of stf: ", this%srcf0(isrc), "                             |"
                 write (*,"(a40, f10.1, a30)")&
@@ -142,17 +166,18 @@ module sourceReceiverMod
                "|                     Momenttensor Mzz: ", this%srcM(2, isrc), "                             |"
                 write (*,"(a40, f10.3, a30)")&
                "|                     Momenttensor Mxz: ", this%srcM(3, isrc), "                             |"
-                write (*, "(a80)") "--------------------------------------------------------------------------------"
+                write (*, "(a80)") "|------------------------------------------------------------------------------|"
             enddo
         endif
     end subroutine initSource
 
-    subroutine initReceiver(par, this, errmsg)
+    subroutine initReceiver(par, this, coord, errmsg)
         type(error_message) :: errmsg
         type (parameterVar) :: par
         type(recVar) :: this
         integer :: irec, ier
-        character(len=256) :: filename
+        real(kind=custom_real), dimension(:,:) :: coord
+        character(len=256) :: filename, dummy
         character(len=12) :: myname = "initReceiver"
 
         call addTrace(errmsg, myname)
@@ -160,12 +185,14 @@ module sourceReceiverMod
         filename=trim('data/stations')
         open(unit=19,file=trim(filename), status ='old', iostat = ier)
         if (ier /= 0) then
-            call add(errmsg,2,'Could not open file: '//trim(filename),myname)
+            call add(errmsg,2,'Could not open file!',myname, filename)
             call print(errmsg)
             stop
         endif
 
-        read(19,*) this%nrec
+        call readIntPar(this%nrec, "nrec", filename, 0, errmsg)
+        if (.level.errmsg ==2 ) then; call print(errmsg);stop; endif
+        read(19,*) dummy !This line exists to skip the first line
 
         allocate(this%recxz(2,this%nrec))
         allocate(this%recrs(2,this%nrec))
@@ -174,6 +201,8 @@ module sourceReceiverMod
         allocate(this%recnr(this%nrec))
         do irec=1,this%nrec
             read(19,*) this%recnr(irec),this%recxz(1,irec),this%recxz(2,irec)
+            call modelConflict(this%recxz(1, irec), "xrec", minval(coord(1,:)), minval(coord(2,:)), maxval(coord(1,:)), maxval(coord(2,:)), myname, filename, errmsg)
+            call modelConflict(this%recxz(2, irec), "zrec", minval(coord(1,:)), minval(coord(2,:)), maxval(coord(1,:)), maxval(coord(2,:)), myname, filename, errmsg)
         end do
         close(19)
         this%recrs=0
@@ -181,9 +210,9 @@ module sourceReceiverMod
         this%reci=0
 
         if(par%log) then
-            write (*, "(a80)") "--------------------------------------------------------------------------------"
+            write (*, "(a80)") "|------------------------------------------------------------------------------|"
             write (*, "(a40, i10, a30)")   "|                  Number of receivers: ", this%nrec, "                             |"
-            write (*, "(a80)") "--------------------------------------------------------------------------------"
+            write (*, "(a80)") "|------------------------------------------------------------------------------|"
             do irec=1,this%nrec
                 write (*,"(a40, i10, a30)") &
                "|                             reciever: ", this%recnr(irec), "                             |"
@@ -191,60 +220,22 @@ module sourceReceiverMod
                "|              X-value of the reciever: ", this%recxz(1, irec), "                             |"
                 write (*,"(a40, f10.2, a30)")&
                "|              Z-value of the reciever: ", this%recxz(2, irec), "                             |"
-                write (*, "(a80)") "--------------------------------------------------------------------------------"
+                write (*, "(a80)") "|------------------------------------------------------------------------------|"
 
             enddo
         endif
     end subroutine initReceiver
 
-    subroutine initReceiver1(par,this, errmsg)
-        type(error_message) :: errmsg
-        type(parameterVar) :: par
-        type(recVar) :: this
-        integer :: irec, ier
-        character(len=256) :: filename
-        character(len=12) :: myname = "initReceiver"
-
-        call addTrace(errmsg, myname)
-
-        ! read in sources
-        filename=trim('data/stations')
-        open(unit=19,file=trim(filename), status = 'old', iostat = ier)
-        if (ier /= 0) then
-            call add(errmsg,2,'Could not open file: '//trim(filename),myname)
-            call print(errmsg)
-            stop
-        endif
-
-        read(19,*) this%nrec
-
-        if (par%log) write(*,*) "--------------------------------------------------------------------------------------"
-        if (par%log) write(*,*) "Read ",this%nrec, " receiver"
-        if (par%log) write(*,*)
-
-        allocate(this%recxz(2,this%nrec))
-        allocate(this%recrs(2,this%nrec))
-        allocate(this%recelem(this%nrec))
-        allocate(this%reci(this%nrec))
-        allocate(this%recnr(this%nrec))
-        do irec=1,this%nrec
-            read(19,*) this%recnr(irec),this%recxz(1,irec),this%recxz(2,irec)
-        end do
-        close(19)
-        this%recrs=0
-        this%recelem=0
-        this%reci=0
-    end subroutine initReceiver1
-
-    subroutine findSource(par,this,vx,vz,nglob,nelem,ibool,coord,elem,dr,ds,errmsg)
+    subroutine findSource(par,this,vx,vz,nelem,ibool,coord,elem,dr,ds,pml,errmsg)
         type(parameterVar) :: par
         type(srcVar) :: this
         type(error_message) :: errmsg
+        integer, dimension(:) :: pml
         integer, dimension(:,:), pointer, intent(in) :: elem
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: coord
         integer, pointer, dimension(:,:), intent(in) :: ibool
         real(kind=CUSTOM_REAL), dimension(:), pointer, intent(in) :: vx,vz
-        integer :: nglob, nelem
+        integer :: nelem
         real(kind=CUSTOM_REAL), dimension(Np) :: x,z,r,s
         logical, dimension(nelem,this%nsrc) :: checkelem
         integer :: isrc, i, ie, j, iglob, besave
@@ -273,11 +264,14 @@ module sourceReceiverMod
         ! get local element
         call nodes(balpha(NGLL),x,z)
         call xyToRs(x,z,r,s)
-        if (par%log) write(*,*) "--------------------------------------------------------------------------------------"
+
         call vdm2d(vdm,r,s)
         vdmTinv=vdm
         vdmTinv=transpose(vdmTinv)
         call invert(vdmTinv, errmsg)
+
+        src_r = 0.
+        src_s = 0.
 
         ! do initial guess for source points
         isrc=1
@@ -297,19 +291,12 @@ module sourceReceiverMod
                     end if
                 end do
             end do
+
             xztemp(1) = this%srcxz(1,isrc)
             xztemp(2) = this%srcxz(2,isrc)
             ie=this%srcelem(isrc)
             iv = ibool(:,ie)
-            call geometricFactors2d(rx,sx,rz,sz,jacobian,vx(iv),vz(iv),dr,ds)
-            if (par%debug) then
-                do j=1,size(jacobian)
-                    if (jacobian(j) .le. 0.0) then
-                        call add(errmsg, 2, "Jacobian negative or zero! Abort...", myname)
-                        if (.level.errmsg == 2) then; call print(errmsg); stop; endif
-                    end if
-                end do
-            endif
+            call geometricFactors2d(rx,sx,rz,sz,jacobian,vx(iv),vz(iv),dr,ds, errmsg)
 
             do i=1, num_iter
                 xz(1) = 0.5 * ( -(src_r+src_s) * coord(1,elem(1,ie)) + (1.0+src_r) * coord(1,elem(2,ie)) +&
@@ -363,16 +350,26 @@ module sourceReceiverMod
                     else
                         this%srcrs(1,isrc) = src_r
                         this%srcrs(2,isrc) = src_s
-                        if (par%log) write(*,*) "Find source   ",isrc, "at global coordinates", xz(1),xz(2)
-                        if (par%log) write(*,*) "Final guess for source ",isrc, "in global element", this%srcelem(isrc), " and local coordinates", this%srcrs(1,isrc),this%srcrs(2,isrc)
+                        if (pml(ie) == 1 .and. par%set_pml) then
+                            write(errstr,*) "Source ", isrc, " is located inside the PML layer. Check the location of this source."
+                            call add(errmsg, 2, errstr, myname, "data/source")
+                        end if
+                        if (par%log) then
+                            write(*,'(a40, i4, a36)') "|                          Find source: ",isrc, "                                   |"
+                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+                                "|                   global coordinates: (", xz(1), ", ",  xz(2), " )                  |"
+                            write(*,'(a40, i4, a36)') "|               Final guess for source: ",isrc, "                                   |"
+                            write(*,'(a40, i6, a34)') "|                       global element: ", this%srcelem(isrc), "                                 |"
+                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+                                "|                    local coordinates: (", this%srcrs(1,isrc),", ", this%srcrs(2,isrc), " )                  |"
+                        end if
                         isrc=isrc+1
                         besave=1
                     end if
                     if (besave > 10) then !10 versuche sonst abbruch
                         write(errstr,*) "ERROR, could not find source", isrc,"at global coordinates", xz(1),xz(2)
-                        call add(errmsg, 2, errstr, myname)
+                        call add(errmsg, 2, errstr, myname, "data/source")
                         call print(errmsg)
-                        if(par%log) write(*,*) "ERROR, could not find source", isrc,"at global coordinates", xz(1),xz(2)
                         stop
                     end if
                 end if
@@ -380,16 +377,17 @@ module sourceReceiverMod
         end do !isrc
     end subroutine findSource
 
-    subroutine findReceiver(par,this,vx,vz,nglob,nelem,ibool,coord,elem,dr,ds,errmsg)
+    subroutine findReceiver(par,this,vx,vz,nelem,ibool,coord,elem,dr,ds,pml,errmsg)
         type(parameterVar) :: par
         type(recVar), intent(inout) :: this
         type(error_message) :: errmsg
+        integer, dimension(:) :: pml
         integer, dimension(:,:), pointer, intent(in) :: elem
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: coord
         integer, pointer, dimension(:,:), intent(in) :: ibool
         real(kind=CUSTOM_REAL), dimension(:), pointer, intent(in) :: vx,vz
         real(kind=CUSTOM_REAL), dimension(:,:), intent(in) :: dr,ds
-        integer :: nglob, nelem
+        integer :: nelem
         real(kind=CUSTOM_REAL), dimension(Np) :: x,z,r,s
 
         logical, dimension(nelem,this%nrec) :: checkelem
@@ -414,17 +412,17 @@ module sourceReceiverMod
 
         call addTrace(errmsg, myname)
 
-        write(*,*) "in find rec"
-
         checkelem=.true.
         ! get local element
         call nodes(balpha(NGLL),x,z)
         call xyToRs(x,z,r,s)
-        if (par%log) write(*,*) "--------------------------------------------------------------------------------------"
         call vdm2d(vdm,r,s)
         vdmTinv=vdm
         vdmTinv=transpose(vdmTinv)
         call invert(vdmTinv, errmsg)
+
+        rec_r = 0.
+        rec_s = 0.
 
         ! do initial guess for receiver points
         irec=1
@@ -448,15 +446,7 @@ module sourceReceiverMod
             xztemp(2) = this%recxz(2,irec)
             ie=this%recelem(irec)
             iv = ibool(:,ie)
-            call geometricFactors2d(rx,sx,rz,sz,jacobian,vx(iv),vz(iv),dr,ds)
-            if (par%debug) then
-                do j=1,size(jacobian)
-                    if (jacobian(j) .le. 0.0) then
-                        call add(errmsg, 2, "Jacobian negative or zero! Abort...", myname)
-                        if (.level.errmsg == 2) then; call print(errmsg); stop; endif
-                    end if
-                end do
-            endif
+            call geometricFactors2d(rx,sx,rz,sz,jacobian,vx(iv),vz(iv),dr,ds, errmsg)
 
             do i=1, num_iter
                 xz(1) = 0.5 * ( -(rec_r+rec_s) * coord(1,elem(1,ie)) + (1.0+rec_r) * coord(1,elem(2,ie)) +&
@@ -510,16 +500,26 @@ module sourceReceiverMod
                     else
                         this%recrs(1,irec) = rec_r
                         this%recrs(2,irec) = rec_s
-                        if (par%log) write(*,*) "Find receiver   ",irec, "at global coordinates", xz(1),xz(2)
-                        if (par%log) write(*,*) "Final guess for receiver ",irec, "in global element", this%recelem(irec), " and local coordinates", this%recrs(1,irec),this%recrs(2,irec)
+                        if (pml(ie) == 1 .and. par%set_pml) then
+                            write(errstr,*) "Station ", irec, " is located inside the PML layer. Check the location of this station."
+                            call add(errmsg, 1, errstr, myname)
+                        end if
+                        if (par%log) then
+                            write(*,'(a40, i4, a36)') "|                        Find receiver: ",irec, "                                   |"
+                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+                                "|                   global coordinates: (", xz(1), ", ",  xz(2), " )                  |"
+                            write(*,'(a40, i4, a36)') "|             Final guess for receiver: ",irec, "                                   |"
+                            write(*,'(a40, i6, a34)') "|                       global element: ", this%recelem(irec), "                                 |"
+                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+                                "|                    local coordinates: (", this%recrs(1,irec),", ", this%recrs(2,irec), " )                  |"
+                        end if
                         irec=irec+1
                         besave=1
                     end if
                     if (besave > 10) then !10 versuche sonst abbruch
                         write(errstr,*) "ERROR, could not find receiver", irec,"at global coordinates", xz(1),xz(2)
-                        call add(errmsg, 2, errstr, myname)
+                        call add(errmsg, 2, errstr, myname, "data/stations")
                         call print(errmsg)
-                        if(par%log) write(*,*) "ERROR, could not find receiver", irec,"at global coordinates", xz(1),xz(2)
                         stop
                     end if
                 end if
@@ -623,7 +623,8 @@ module sourceReceiverMod
     subroutine writeSrcVar(this,filename)
         type(srcVar) :: this
         character(len=*) :: filename
-        write(*,*) "write scrVar ", filename
+        !write(*,'(a80)') "|------------------------------------------------------------------------------|"
+        write(*,'(a40, a16, a24)') "|            write soure database-file: ", trim(filename), "                       |"
         open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
         write(27) this%nsrc
         write(27) this%srcxz
@@ -646,7 +647,7 @@ module sourceReceiverMod
     subroutine writeRecVar(this,filename)
         type(recVar) :: this
         character(len=*) :: filename
-        write(*,*) "write scrVar ", filename
+        write(*,'(a40, a16, a24)') "|         write receiver database-file: ", trim(filename), "                       |"
         open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
         write(27) this%nrec
         write(27) this%recxz
@@ -663,9 +664,9 @@ module sourceReceiverMod
         type(srcVar) :: this
         character(len=*) :: filename
 
-        write(*,*) "read scrVar ", filename
-        open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
+        write(*,'(a40, a16, a24)') "|            read source database-file: ", trim(filename), "                       |"
 
+        open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
         read(27) this%nsrc
 
         allocate(this%srcxz(2,this%nsrc))
@@ -701,10 +702,10 @@ module sourceReceiverMod
     subroutine readRecVar(this,filename)
         type(recVar) :: this
         character(len=*) :: filename
+        write(*,'(a80)') "|------------------------------------------------------------------------------|"
+        write(*,'(a40, a16, a24)') "|          read receiver database-file: ", trim(filename), "                       |"
 
-        write(*,*) "read recVar ", filename
         open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
-
         read(27) this%nrec
 
         allocate(this%recxz(2,this%nrec))

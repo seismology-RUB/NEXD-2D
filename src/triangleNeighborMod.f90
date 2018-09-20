@@ -1,30 +1,270 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module triangleNeighborMod
 !
 ! code modified from John Burkards triangle neighbor routine to get the neighbors of a triangle
 ! modified by LL LL
-! 
-  implicit none
+!
+implicit none
 !
 contains
 !
+subroutine get_unit ( iunit )
+
+!*****************************************************************************80
+!
+!! GET_UNIT returns a free FORTRAN unit number.
+!
+!  Discussion:
+!
+!    A "free" FORTRAN unit number is an integer between 1 and 99 which
+!    is not currently associated with an I/O device.  A free FORTRAN unit
+!    number is needed in order to open a file with the OPEN command.
+!
+!    If IUNIT = 0, then no free FORTRAN unit could be found, although
+!    all 99 units were checked (except for units 5, 6 and 9, which
+!    are commonly reserved for console I/O).
+!
+!    Otherwise, IUNIT is an integer between 1 and 99, representing a
+!    free FORTRAN unit.  Note that GET_UNIT assumes that units 5 and 6
+!    are special, and will never return those values.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    18 September 2005
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Output, integer ( kind = 4 ) IUNIT, the free unit number.
+!
+  implicit none
+
+  integer ( kind = 4 ) i
+  integer ( kind = 4 ) ios
+  integer ( kind = 4 ) iunit
+  logical lopen
+
+  iunit = 0
+
+  do i = 1, 99
+
+    if ( i /= 5 .and. i /= 6 .and. i /= 9 ) then
+
+      inquire ( unit = i, opened = lopen, iostat = ios )
+
+      if ( ios == 0 ) then
+        if ( .not. lopen ) then
+          iunit = i
+          return
+        end if
+      end if
+
+    end if
+
+  end do
+
+  return
+end subroutine get_unit
+
+function i4_modp ( i, j )
+
+!*****************************************************************************80
+!
+!! I4_MODP returns the nonnegative remainder of I4 division.
+!
+!  Discussion:
+!
+!    If
+!      NREM = I4_MODP ( I, J )
+!      NMULT = ( I - NREM ) / J
+!    then
+!      I = J * NMULT + NREM
+!    where NREM is always nonnegative.
+!
+!    The MOD function computes a result with the same sign as the
+!    quantity being divided.  Thus, suppose you had an angle A,
+!    and you wanted to ensure that it was between 0 and 360.
+!    Then mod(A,360) would do, if A was positive, but if A
+!    was negative, your result would be between -360 and 0.
+!
+!    On the other hand, I4_MODP(A,360) is between 0 and 360, always.
+!
+!  Example:
+!
+!        I     J     MOD  I4_MODP    Factorization
+!
+!      107    50       7       7    107 =  2 *  50 + 7
+!      107   -50       7       7    107 = -2 * -50 + 7
+!     -107    50      -7      43   -107 = -3 *  50 + 43
+!     -107   -50      -7      43   -107 =  3 * -50 + 43
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    02 March 1999
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) I, the number to be divided.
+!
+!    Input, integer ( kind = 4 ) J, the number that divides I.
+!
+!    Output, integer ( kind = 4 ) I4_MODP, the nonnegative remainder when I is
+!    divided by J.
+!
+  implicit none
+
+  integer ( kind = 4 ) i
+  integer ( kind = 4 ) i4_modp
+  integer ( kind = 4 ) j
+
+  if ( j == 0 ) then
+    write ( *, '(a)' ) ' '
+    write ( *, '(a)' ) 'I4_MODP - Fatal error!'
+    write ( *, '(a,i8)' ) '  I4_MODP ( I, J ) called with J = ', j
+    stop
+  end if
+
+  i4_modp = mod ( i, j )
+
+  if ( i4_modp < 0 ) then
+    i4_modp = i4_modp + abs ( j )
+  end if
+
+  return
+end function i4_modp
+
+function i4_wrap ( ival, ilo, ihi )
+
+!*****************************************************************************80
+!
+!! I4_WRAP forces an I4 to lie between given limits by wrapping.
+!
+!  Discussion:
+!
+!    An I4 is an integer ( kind = 4 ) value.
+!
+!    There appears to be a bug in the GFORTRAN compiler which can lead to
+!    erroneous results when the first argument of I4_WRAP is an expression.
+!    In particular:
+!
+!    do i = 1, 3
+!      if ( test ) then
+!        i4 = i4_wrap ( i + 1, 1, 3 )
+!      end if
+!    end do
+!
+!    was, when I = 3, returning I4 = 3.  So I had to replace this with
+!
+!    do i = 1, 3
+!      if ( test ) then
+!        i4 = i + 1
+!        i4 = i4_wrap ( i4, 1, 3 )
+!      end if
+!    end do
+!
+!  Example:
+!
+!    ILO = 4, IHI = 8
+!
+!    I  Value
+!
+!    -2     8
+!    -1     4
+!     0     5
+!     1     6
+!     2     7
+!     3     8
+!     4     4
+!     5     5
+!     6     6
+!     7     7
+!     8     8
+!     9     4
+!    10     5
+!    11     6
+!    12     7
+!    13     8
+!    14     4
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    19 August 2003
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) IVAL, a value.
+!
+!    Input, integer ( kind = 4 ) ILO, IHI, the desired bounds.
+!
+!    Output, integer ( kind = 4 ) I4_WRAP, a "wrapped" version of the value.
+!
+  implicit none
+
+  integer ( kind = 4 ) i4_wrap
+  integer ( kind = 4 ) ihi
+  integer ( kind = 4 ) ilo
+  integer ( kind = 4 ) ival
+  integer ( kind = 4 ) jhi
+  integer ( kind = 4 ) jlo
+  integer ( kind = 4 ) value
+  integer ( kind = 4 ) wide
+
+  jlo = min ( ilo, ihi )
+  jhi = max ( ilo, ihi )
+
+  wide = jhi - jlo + 1
+
+  if ( wide == 1 ) then
+    value = jlo
+  else
+    value = jlo + i4_modp ( ival - jlo, wide )
+  end if
+
+  i4_wrap = value
+
+  return
+end function i4_wrap
 
 subroutine i4col_compare ( m, n, a, i, j, isgn )
 
@@ -125,6 +365,7 @@ subroutine i4col_compare ( m, n, a, i, j, isgn )
 
   return
 end subroutine i4col_compare
+
 subroutine i4col_sort_a ( m, n, a )
 
 !*****************************************************************************80
@@ -221,6 +462,7 @@ subroutine i4col_sort_a ( m, n, a )
 
   return
 end subroutine i4col_sort_a
+
 subroutine i4col_swap ( m, n, a, i, j )
 
 !*****************************************************************************80
@@ -259,10 +501,10 @@ subroutine i4col_swap ( m, n, a, i, j )
 !
 !  Parameters:
 !
-!    Input, integer ( kind = 4 ) M, N, the number of rows and columns 
+!    Input, integer ( kind = 4 ) M, N, the number of rows and columns
 !    in the array.
 !
-!    Input/output, integer ( kind = 4 ) A(M,N), an array of N columns 
+!    Input/output, integer ( kind = 4 ) A(M,N), an array of N columns
 !    of length M.
 !
 !    Input, integer ( kind = 4 ) I, J, the columns to be swapped.
@@ -316,7 +558,7 @@ subroutine sort_heap_external ( n, indx, i, j, isgn )
 !
 !  Licensing:
 !
-!    This code is distributed under the GNU LGPL license. 
+!    This code is distributed under the GNU LGPL license.
 !
 !  Modified:
 !
@@ -491,6 +733,7 @@ subroutine sort_heap_external ( n, indx, i, j, isgn )
 
   return
 end subroutine sort_heap_external
+
 subroutine triangulation_neighbor_triangles ( triangle_order, triangle_num, &
      triangle_node, triangle_neighbor )
 
@@ -589,14 +832,14 @@ subroutine triangulation_neighbor_triangles ( triangle_order, triangle_num, &
   !
   !    Input, integer ( kind = 4 ) TRIANGLE_NUM, the number of triangles.
   !
-  !    Input, integer ( kind = 4 ) TRIANGLE_NODE(TRIANGLE_ORDER,TRIANGLE_NUM), 
+  !    Input, integer ( kind = 4 ) TRIANGLE_NODE(TRIANGLE_ORDER,TRIANGLE_NUM),
   !    the nodes that make up each triangle.
   !
   !    Output, integer ( kind = 4 ) TRIANGLE_NEIGHBOR(3,TRIANGLE_NUM), the three
-  !    triangles that are direct neighbors of a given triangle.  
-  !    TRIANGLE_NEIGHBOR(1,I) is the index of the triangle which touches side 1, 
-  !    defined by nodes 2 and 3, and so on.  TRIANGLE_NEIGHBOR(1,I) is negative 
-  !    if there is no neighbor on that side.  In this case, that side of the 
+  !    triangles that are direct neighbors of a given triangle.
+  !    TRIANGLE_NEIGHBOR(1,I) is the index of the triangle which touches side 1,
+  !    defined by nodes 2 and 3, and so on.  TRIANGLE_NEIGHBOR(1,I) is negative
+  !    if there is no neighbor on that side.  In this case, that side of the
   !    triangle lies on the boundary of the triangulation.
   !
   implicit none
@@ -698,4 +941,407 @@ subroutine triangulation_neighbor_triangles ( triangle_order, triangle_num, &
 
   return
 end subroutine triangulation_neighbor_triangles
+
+subroutine triangulation_order3_plot ( file_name, node_num, node_xy, &
+  triangle_num, triangle_node, node_show, triangle_show )
+
+!*****************************************************************************80
+!
+!! TRIANGULATION_ORDER3_PLOT plots a 3-node triangulation of a set of nodes.
+!
+!  Discussion:
+!
+!    The triangulation is most usually a Delaunay triangulation,
+!    but this is not necessary.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    08 June 2009
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Input, character ( len = * ) FILE_NAME, the name of the output file.
+!
+!    Input, integer ( kind = 4 ) NODE_NUM, the number of nodes.
+!
+!    Input, real ( kind = 8 ) NODE_XY(2,NODE_NUM), the coordinates of the nodes.
+!
+!    Input, integer ( kind = 4 ) TRIANGLE_NUM, the number of triangles.
+!
+!    Input, integer ( kind = 4 ) TRIANGLE_NODE(3,TRIANGLE_NUM), lists, for
+!    each triangle, the indices of the nodes that form the vertices of the
+!    triangle.
+!
+!    Input, integer ( kind = 4 ) NODE_SHOW,
+!    0, do not show nodes;
+!    1, show nodes;
+!    2, show nodes and label them.
+!
+!    Input, integer ( kind = 4 ) TRIANGLE_SHOW,
+!    0, do not show triangles;
+!    1, show triangles;
+!    2, show triangles and label them.
+!
+  implicit none
+
+  integer   ( kind = 4 ) node_num
+  integer   ( kind = 4 ) triangle_num
+  integer   ( kind = 4 ), parameter :: triangle_order = 3
+
+  real      ( kind = 8 ) ave_x
+  real      ( kind = 8 ) ave_y
+  integer   ( kind = 4 ) :: circle_size
+  integer   ( kind = 4 ) delta
+  integer   ( kind = 4 ) e
+  character ( len = * )  file_name
+  integer   ( kind = 4 ) file_unit
+  integer   ( kind = 4 ) i
+  integer   ( kind = 4 ) ios
+  integer   ( kind = 4 ) node
+  integer   ( kind = 4 ) node_show
+  real      ( kind = 8 ) node_xy(2,node_num)
+  character ( len = 40 ) string
+  integer   ( kind = 4 ) triangle
+  integer   ( kind = 4 ) triangle_node(triangle_order,triangle_num)
+  integer   ( kind = 4 ) triangle_show
+  real      ( kind = 8 ) x_max
+  real      ( kind = 8 ) x_min
+  integer   ( kind = 4 ) x_ps
+  integer   ( kind = 4 ) :: x_ps_max = 576
+  integer   ( kind = 4 ) :: x_ps_max_clip = 594
+  integer   ( kind = 4 ) :: x_ps_min = 36
+  integer   ( kind = 4 ) :: x_ps_min_clip = 18
+  real      ( kind = 8 ) x_scale
+  real      ( kind = 8 ) y_max
+  real      ( kind = 8 ) y_min
+  integer   ( kind = 4 ) y_ps
+  integer   ( kind = 4 ) :: y_ps_max = 666
+  integer   ( kind = 4 ) :: y_ps_max_clip = 684
+  integer   ( kind = 4 ) :: y_ps_min = 126
+  integer   ( kind = 4 ) :: y_ps_min_clip = 108
+  real      ( kind = 8 ) y_scale
+!
+!  We need to do some figuring here, so that we can determine
+!  the range of the data, and hence the height and width
+!  of the piece of paper.
+!
+  x_max = maxval ( node_xy(1,1:node_num) )
+  x_min = minval ( node_xy(1,1:node_num) )
+  x_scale = x_max - x_min
+
+  x_max = x_max + 0.05D+00 * x_scale
+  x_min = x_min - 0.05D+00 * x_scale
+  x_scale = x_max - x_min
+
+  y_max = maxval ( node_xy(2,1:node_num) )
+  y_min = minval ( node_xy(2,1:node_num) )
+  y_scale = y_max - y_min
+
+  y_max = y_max + 0.05D+00 * y_scale
+  y_min = y_min - 0.05D+00 * y_scale
+  y_scale = y_max - y_min
+
+  if ( x_scale < y_scale ) then
+
+    delta = nint ( real ( x_ps_max - x_ps_min, kind = 8 ) &
+      * ( y_scale - x_scale ) / ( 2.0D+00 * y_scale ) )
+
+    x_ps_max = x_ps_max - delta
+    x_ps_min = x_ps_min + delta
+
+    x_ps_max_clip = x_ps_max_clip - delta
+    x_ps_min_clip = x_ps_min_clip + delta
+
+    x_scale = y_scale
+
+  else if ( y_scale < x_scale ) then
+
+    delta = nint ( real ( y_ps_max - y_ps_min, kind = 8 ) &
+      * ( x_scale - y_scale ) / ( 2.0D+00 * x_scale ) )
+
+    y_ps_max      = y_ps_max - delta
+    y_ps_min      = y_ps_min + delta
+
+    y_ps_max_clip = y_ps_max_clip - delta
+    y_ps_min_clip = y_ps_min_clip + delta
+
+    y_scale = x_scale
+
+  end if
+
+  call get_unit ( file_unit )
+
+  open ( unit = file_unit, file = file_name, status = 'replace', &
+    iostat = ios )
+
+  if ( ios /= 0 ) then
+    write ( *, '(a)' ) ' '
+    write ( *, '(a)' ) 'TRIANGULATION_ORDER3_PLOT - Fatal error!'
+    write ( *, '(a)' ) '  Can not open output file.'
+    return
+  end if
+
+  write ( file_unit, '(a)' ) '%!PS-Adobe-3.0 EPSF-3.0'
+  write ( file_unit, '(a)' ) '%%Creator: triangulation_order3_plot.f90'
+  write ( file_unit, '(a)' ) '%%Title: ' // trim ( file_name )
+  write ( file_unit, '(a)' ) '%%Pages: 1'
+  write ( file_unit, '(a,i3,2x,i3,2x,i3,2x,i3)' ) '%%BoundingBox: ', &
+    x_ps_min, y_ps_min, x_ps_max, y_ps_max
+  write ( file_unit, '(a)' ) '%%Document-Fonts: Times-Roman'
+  write ( file_unit, '(a)' ) '%%LanguageLevel: 1'
+  write ( file_unit, '(a)' ) '%%EndComments'
+  write ( file_unit, '(a)' ) '%%BeginProlog'
+  write ( file_unit, '(a)' ) '/inch {72 mul} def'
+  write ( file_unit, '(a)' ) '%%EndProlog'
+  write ( file_unit, '(a)' ) '%%Page: 1 1'
+  write ( file_unit, '(a)' ) 'save'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  Increase line width from default 0.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '2 setlinewidth'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  Set the RGB line color to very light gray.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '0.900  0.900  0.900 setrgbcolor'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  Draw a gray border around the page.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) 'newpath'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', x_ps_min, y_ps_min, ' moveto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', x_ps_max, y_ps_min, ' lineto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', x_ps_max, y_ps_max, ' lineto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', x_ps_min, y_ps_max, ' lineto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', x_ps_min, y_ps_min, ' lineto'
+  write ( file_unit, '(a)' ) 'stroke'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  Set the RGB color to black.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '0.000  0.000  0.000 setrgbcolor'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  Set the font and its size.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '/Times-Roman findfont'
+  write ( file_unit, '(a)' ) '0.50 inch scalefont'
+  write ( file_unit, '(a)' ) 'setfont'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  Print a title.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  210  702  moveto'
+  write ( file_unit, '(a)' ) '%  (Triangulation)  show'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  Define a clipping polygon.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) 'newpath'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', &
+    x_ps_min_clip, y_ps_min_clip, ' moveto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', &
+    x_ps_max_clip, y_ps_min_clip, ' lineto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', &
+    x_ps_max_clip, y_ps_max_clip, ' lineto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', &
+    x_ps_min_clip, y_ps_max_clip, ' lineto'
+  write ( file_unit, '(a,i3,2x,i3,2x,a)' ) '  ', &
+    x_ps_min_clip, y_ps_min_clip, ' lineto'
+  write ( file_unit, '(a)' ) 'clip newpath'
+!
+!  Draw the nodes.
+!
+  if ( node_num <= 200 ) then
+    circle_size = 5
+  else if ( node_num <= 500 ) then
+    circle_size = 4
+  else if ( node_num <= 1000 ) then
+    circle_size = 3
+  else if ( node_num <= 5000 ) then
+    circle_size = 2
+  else
+    circle_size = 1
+  end if
+
+  if ( 1 <= node_show ) then
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Draw filled dots at the nodes.'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Set the RGB color to blue.'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '0.000  0.150  0.750 setrgbcolor'
+    write ( file_unit, '(a)' ) '%'
+
+    do node = 1, node_num
+
+      x_ps = int ( &
+        ( ( x_max - node_xy(1,node)         ) * real ( x_ps_min, kind = 8 )   &
+        + (         node_xy(1,node) - x_min ) * real ( x_ps_max, kind = 8 ) ) &
+        / ( x_max                   - x_min ) )
+
+      y_ps = int ( &
+        ( ( y_max - node_xy(2,node)         ) * real ( y_ps_min, kind = 8 )   &
+        + (         node_xy(2,node) - y_min ) * real ( y_ps_max, kind = 8 ) ) &
+        / ( y_max                   - y_min ) )
+
+      write ( file_unit, '(a,i4,2x,i4,2x,i4,2x,a)' ) 'newpath ', x_ps, y_ps, &
+        circle_size, '0 360 arc closepath fill'
+
+    end do
+
+  end if
+!
+!  Label the nodes.
+!
+  if ( 2 <= node_show ) then
+
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Label the nodes:'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Set the RGB color to darker blue.'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '0.000  0.250  0.850 setrgbcolor'
+    write ( file_unit, '(a)' ) '/Times-Roman findfont'
+    write ( file_unit, '(a)' ) '0.20 inch scalefont'
+    write ( file_unit, '(a)' ) 'setfont'
+    write ( file_unit, '(a)' ) '%'
+
+    do node = 1, node_num
+
+      x_ps = int ( &
+        ( ( x_max - node_xy(1,node)         ) * real ( x_ps_min, kind = 8 )   &
+        + (       + node_xy(1,node) - x_min ) * real ( x_ps_max, kind = 8 ) ) &
+        / ( x_max                   - x_min ) )
+
+      y_ps = int ( &
+        ( ( y_max - node_xy(2,node)         ) * real ( y_ps_min, kind = 8 )   &
+        + (         node_xy(2,node) - y_min ) * real ( y_ps_max, kind = 8 ) ) &
+        / ( y_max                   - y_min ) )
+
+      write ( string, '(i4)' ) node
+      string = adjustl ( string )
+
+      write ( file_unit, '(i4,2x,i4,a)' ) x_ps, y_ps+5, &
+        ' moveto (' // trim ( string ) // ') show'
+
+    end do
+
+  end if
+!
+!  Draw the triangles.
+!
+  if ( 1 <= triangle_show ) then
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Set the RGB color to red.'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '0.900  0.200  0.100 setrgbcolor'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Draw the triangles.'
+    write ( file_unit, '(a)' ) '%'
+
+    do triangle = 1, triangle_num
+
+      write ( file_unit, '(a)' ) 'newpath'
+
+      do i = 1, 4
+
+        e = i4_wrap ( i, 1, 3 )
+
+        node = triangle_node(e,triangle)
+
+        x_ps = int ( &
+          ( ( x_max - node_xy(1,node)         ) &
+          * real ( x_ps_min, kind = 8 )   &
+          + (         node_xy(1,node) - x_min ) &
+          * real ( x_ps_max, kind = 8 ) ) &
+          / ( x_max                   - x_min ) )
+
+        y_ps = int ( &
+          ( ( y_max - node_xy(2,node)         ) &
+          * real ( y_ps_min, kind = 8 )   &
+          + (         node_xy(2,node) - y_min ) &
+          * real ( y_ps_max, kind = 8 ) ) &
+          / ( y_max                   - y_min ) )
+
+        if ( i == 1 ) then
+          write ( file_unit, '(i3,2x,i3,2x,a)' ) x_ps, y_ps, ' moveto'
+        else
+          write ( file_unit, '(i3,2x,i3,2x,a)' ) x_ps, y_ps, ' lineto'
+        end if
+
+      end do
+
+      write ( file_unit, '(a)' ) 'stroke'
+
+    end do
+
+  end if
+!
+!  Label the triangles.
+!
+  if ( 2 <= triangle_show ) then
+
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Label the triangles:'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '%  Set the RGB color to darker red.'
+    write ( file_unit, '(a)' ) '%'
+    write ( file_unit, '(a)' ) '0.950  0.250  0.150 setrgbcolor'
+    write ( file_unit, '(a)' ) '/Times-Roman findfont'
+    write ( file_unit, '(a)' ) '0.20 inch scalefont'
+    write ( file_unit, '(a)' ) 'setfont'
+    write ( file_unit, '(a)' ) '%'
+
+    do triangle = 1, triangle_num
+
+      ave_x = 0.0D+00
+      ave_y = 0.0D+00
+
+      do i = 1, 3
+
+        node = triangle_node(i,triangle)
+
+        ave_x = ave_x + node_xy(1,node)
+        ave_y = ave_y + node_xy(2,node)
+
+      end do
+
+      ave_x = ave_x / 3.0D+00
+      ave_y = ave_y / 3.0D+00
+
+      x_ps = int ( &
+        ( ( x_max - ave_x         ) * real ( x_ps_min, kind = 8 )   &
+        + (       + ave_x - x_min ) * real ( x_ps_max, kind = 8 ) ) &
+        / ( x_max         - x_min ) )
+
+      y_ps = int ( &
+        ( ( y_max - ave_y         ) * real ( y_ps_min, kind = 8 )   &
+        + (         ave_y - y_min ) * real ( y_ps_max, kind = 8 ) ) &
+        / ( y_max         - y_min ) )
+
+      write ( string, '(i4)' ) triangle
+      string = adjustl ( string )
+
+      write ( file_unit, '(i4,2x,i4,a)' ) x_ps, y_ps, ' moveto (' &
+        // trim ( string ) // ') show'
+
+    end do
+
+  end if
+
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) 'restore  showpage'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%  End of page.'
+  write ( file_unit, '(a)' ) '%'
+  write ( file_unit, '(a)' ) '%%Trailer'
+  write ( file_unit, '(a)' ) '%%EOF'
+  close ( unit = file_unit )
+
+  return
+end subroutine triangulation_order3_plot
+
 end module triangleNeighborMod

@@ -1,0 +1,65 @@
+# Parameter file for 2D NDG software
+
+# Title of the simulation
+title                   = lsiExample
+
+# Choose the way in which the flux is calculated 
+fluxtype                = 0                 # "0" Pre-calculated flux (only for elastic simulations), "1" existing methods
+
+# Convenience Parameters
+log                     = .true.            # "true" if log should be displayed on screen, otherwise "false"
+debug                   = .true.            # Parameter to enable certain output for debugging purposes
+
+# Number of Processors
+nproc                   = 46                # depending on setup (currently max is 96)
+
+# Model parameters
+externalfilename        = cold_flach2.grd   # File containing the external model
+extvel                  = .false.           # "true" if external velocity model should be loaded, otherwise "false"
+
+# Parameters regarding seismograms
+autoshift               = .false.           # Corrects for the "width" of the used wavelet. For a Ricker or Gaussian the maximum will be at t=0. If set to .false plott0 is used instead.
+plott0                  = 3e-3              # Offset for the seismogram. Default is 0.
+div                     = .false.           # "true" if the radial component of the seimogram is to be calculated, otherwise false
+curl                    = .false.           # "true" if the tangential component of the seimogram is to be calculated, otherwise false
+
+# Fracture parameters
+lsi                     = .true.            # "true" if the fracture influence is to be calculated, otherwise "false"  
+normal                  = .true.            # Jump for P-Waves
+tangential              = .true.            # Jump for SV-Waves
+
+# Movie parameters
+movie                   = .true.            # if "true" the a movie is created, otherwise "false"
+frame                   = 100               # Number of time steps for each frame of the movie
+save_movie_trimesh      = .true.            # Create files with average in each element
+save_movie_points       = .false.           # Create files with data for each point
+save_movie_displacement = .false.           # Plot displacement field
+save_movie_velocity     = .true.            # Plot velocity field
+save_movie_stress       = .false.           # Plot stress field
+
+# Parameters for Timeintegration
+timeint                 = 4                 # which timeintegration?  1:euler 2:rk2 (TVD) 3:rk3 (TVD) 4:rk4 (LSERK)
+nt                      = 10000             # Number of timesteps
+autodt                  = .true.            # automatic calculation of dt
+dt                      = 0.0               # if autodt =.false. choose dt manually
+cfl                     = 0.7               # cfl value for dt
+
+# pmlparameters
+set_pml                 = .false.           # if "true" pml are set else absorbing boundary conditions are set
+pml_delta               = 3.0               # pml thickness
+pml_rc                  = 0.001             # pml reclection coff
+pml_kmax                = 1.0               # pml kmax
+pml_afac                = 1.0               # factor for amax
+use_trigger             = .true.            # use sta_lta trigger for energy monitoring
+avg_window1             = 10                # lta window
+avg_window2             = 2                 # sta window
+sta_lta_trigger         = 0.1               # threshold
+
+# attenuation
+attenuation             = .false.           # "true" to enable attenuation otherwise .false.
+f0_att                  = 1200.               # Frequency where the model parameters are applied
+f_max_att               = 1200               # maximum of frequency band for anelastic modulus
+att_factor              = 100.               # factor to define minimum frequency, f_min_att=f_max_att/att_factor
+
+#receiver
+rec_angle               = 0.0               #rotate receivers about dregree

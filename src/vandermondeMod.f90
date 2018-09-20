@@ -1,21 +1,24 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module vandermondeMod
     ! module to create the vandermonde matrix
     use constantsMod
@@ -23,6 +26,7 @@ module vandermondeMod
     use triTrafoMod
     use jacobiMod
     use errorMessage
+    use matrixMod
 
     implicit none
 
@@ -35,7 +39,7 @@ module vandermondeMod
         integer :: i
 
         do i=1,NGLL
-            call jacobiP(v(:,i),r(:),0.0,0.0,i-1)
+            call jacobiP(v(:,i),r(:),zero,zero,i-1)
         end do
     end subroutine vdm1d
 
@@ -64,33 +68,13 @@ module vandermondeMod
         real(kind=CUSTOM_REAL), dimension(:,:), intent(in) :: v
         real(kind=CUSTOM_REAL), dimension(size(v(:,1)),Np) :: w
         integer, intent(in) :: trans
-        real(kind=CUSTOM_REAL), dimension(2*Np) :: work
-        integer, dimension(Np) :: ipvt
-        integer :: ierr, iwork
+
         character(len=8) :: myname = "invVdm2D"
-        character(len=50) :: errstr
 
         call addTrace(errmsg, myname)
-
-        iwork=2*Np
         w=v
-        !LU trafo
-        call sgetrf(Np,Np,w,Np,ipvt,ierr)
-        if (ierr/=0) then
-            write(errstr,*) "Error LU vdm2d ",ierr
-            call add(errmsg, 2, errstr, myname)
-            call print(errmsg)
-            stop
-        end if
+        call invert(w, errmsg)
 
-        ! ivert Pr
-        call sgetri(Np,w,Np,ipvt,work,iwork,ierr)
-        if (ierr/=0) then
-            write(errstr,*) "Error invert vdm2d ",ierr
-            call add(errmsg, 2, errstr, myname)
-            call print(errmsg)
-            stop
-        end if
         if (trans==1) then
            w=transpose(w)
         end if

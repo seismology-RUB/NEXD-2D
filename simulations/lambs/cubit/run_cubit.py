@@ -10,9 +10,9 @@ from numpy import *
 
 
 reload(cubit2dg2d)
-cubit.cmd('set duplicate block elements on')
 
 cubit.init([""])
+cubit.cmd('set duplicate block elements on')
 command = 'open "testtri.cub"'
 cubit.cmd(command)
 

@@ -2,7 +2,7 @@
 # Sources should be added sequentially. Otherwise problems will occur when reading the file
 
 # Number of sources
-nsrc        = 1         # Total Number of sources
+nsrc        = 1         # Total number of sources
 
 # Source 1 - Parameters
 source      = 1         # Running Number of the sources
@@ -10,10 +10,10 @@ xsource     = 1720.     # x-value of the source
 zsource     = 2303.28   # z-value of the source
 delay       = 0.0       # time delay for the source
 sourcetype  = 0         # Type of source: 1 = Moment tensor, 0 = single force
-stf         = 2         # Type of source-time-function: 1 = green, 2 = ricker, 3 = sin^3, 4 = external
+stf         = 2         # Type of source-time-function: 1 = gauss, 2 = ricker, 3 = sin^3, 4 = external
 extwavelet  = /rscratch/minos26/lasse/dg2d/source/1MHz0.5in_clean.txt #file with external wavelet; required if stf = 4
-f0          = 14.5      # center frequency of sft
-factor      = 1.0       # factor of the sft
+f0          = 14.5      # center frequency of stf
+factor      = 1.0       # factor of the stf
 angle_force = 10.       # angle of the force action in the media
 Mxx         = -0.5      # Momenttensor Mxx
 Mzz         = 0.5       # Momenttensor Mzz

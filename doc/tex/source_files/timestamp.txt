@@ -1,0 +1,11 @@
+|--------------------------------------------------------------------|
+|      Time step number     100 (t = 6.12E-04 s) out of   10000      |
+|      Elapsed time:                   0 h 00 m 11 s                 |
+|      Estimated remaining time:       0 h 19 m 06 s                 |
+|      Estimated total time:           0 h 19 m 18 s                 |
+|      Mean elapsed time per timestep:    1.16E-01 s                 |
+|      Current maximum norm of U    : 7.92007526E-08                 |
+|      Current maximum norm of V    : 5.47094794E-04                 |
+|      This run will finish on: Tue Aug 07, 2018 at 11:50            |
+|                    1 % of the simulation completed.                |
+|--------------------------------------------------------------------|

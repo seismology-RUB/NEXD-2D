@@ -1,0 +1,53 @@
+\chapter{Creating a model (with Trelis)}
+\label{chap:model}
+	This chapter explains very briefly how to generate a model for NEXD 2D using the Trelis software and the supplied journal (*.jou) files. Detail on how to use Trelis will not be given. If problems arise, the user is referred to the user manual of Trelis \url{https://www.csimsoft.com/help/trelishelp.htm}. This manual refers to Trelis 16.5. The models presented in the example were created and tested with Trelis version 15.2. A user manual of this version can be downloaded at \url{https://www.csimsoft.com/download?file=Documents/Trelis15UserDocumentation.pdf}. 
+	\section{The journal file}
+	\label{sec:jou}
+		The journal file is a script that can be executed by Trelis to generate a pre-defined model. If the meshing process is to be done often (e.g., due to mesh refinement) it is advisable to create these files. By default, Trelis creates journal files for each run of the meshing process. If the desired model is created, it is advised to save that information in a new file related to the model.   
+		
+		\lstinputlisting[
+    float=htp, 
+    captionpos=b, 
+    label=lis:jou,
+    caption=Excerpt from the mat file,
+    breaklines=true,
+    firstline = 1,
+    lastline = 52,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
+    ]{source_files/lsi.jou}
+    
+    	The reset command at the beginning resets the current environment to its default condition. It is highly recommended to use this command ahead of each run.
+    	Lines 5 - 14 list the commands that are used to create the model (the geometric shape). \\		
+    	  	
+    	\fcolorbox{red}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Warning}: If the model is created using vertex points (like this example) the user has to pay attention on how the surfaces are created. The normal of all surfaces must point in the same outward direction. Otherwise an error is raised n the when "mesher" is run called \emph{\textbf{Jacobian < 0}}. The easiest way avoid this error, is to create the surface by calling the points anticlockwise according to their coordinates (see lines 13 -14).}} \\
+    	
+    	Lines 17 - 19 are optional and are only needed if PML are to be used. They create the PML layer by cutting it from the original volume. \\
+		\\    	
+    	\fcolorbox{red}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Attention}: If PMLs are to be included in the model, they have to be of uniform thickness. Nonuniform thickness of PMLs is currently not supported and creation of such will result in errors.}} \\
+    	
+    	Lines 26 - 30 describe the meshing process. Usually the only portion to be adjusted here is the size of the elements. This is done in line 28 in this example. The unit of this number is meters.
+    	
+    	Next, the materials are defined. In Lines 37 and 38 each block is assigned a number of surfaces. They are assigned by number which are given to the surfaces by Trelis.
+    	In lines 41/42 the material properties are assigned to the blocks. The properties are assigned via the blocks name and consist of the following values: $v_p$, $v_s$, $\rho$, $Q_p$, $Q_s$, and PML index. $v_p$, $v_s$ and $\rho$ are given in SI units. The $Q$-factors relate to attenuation and the last index signifies whether that block is part of the PML or not. Note, the ID for the PML changes for block 2. This indicates that all surfaces contained in this block are part of the PML.
+    	
+    	Similar to the blocks, nodesets are created that contain the nodes on the surfaces. These nodesets are used to assign boundary conditions. Each nodeset is assigned the nodes from a number of surfaces. They my be also left empty. If, for example, no free surface is used, the nodeset can be left empty. However, it needs to be present in the file otherwise the python script  will not function properly. Each nodeset is assigned a name. The user is asked to use the default names, as a modification of that name would require a modification of the python script, that prepares the model for NEXD 2D.
+    	  
+    	Finally, the model is saved as a .cub file. This file will be used to create the parameter files described in section \ref{sec:cubfiles}.
+    	
+    \section{Prepare the input files}
+    \label{sec:prepinput}
+    	The relevant input files are created by running the script "run\_cubit.py". This scripts loads all necessary modules and calls the script "cubit2dg2d.py". The script requires the file "cubit2dg2d.py" to be present in the folder it is executed from, or line 12 (reload command) needs to be modified with the correct path to the file. 
+    	\lstinputlisting[
+    	language = python,
+    float=htp, 
+    captionpos=b, 
+    label=lis:runcub,
+    caption=Python script to create input file from cubit model,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
+    ]{source_files/run_cubit.py} \\
+    	Modify line 16 by replacing the name "testtri.cub" by the name that has been assigned to the model (name of the .cub file). 
+    \section{Using a different meshing tool}
+	\label{sec:diffmesh}
+		Currently no other meshing tool is supported by the developers. If a user is not able to use the supported meshing software he/she is asked to create the relevant input files from the output of his/her own meshing software.     	  
+    	

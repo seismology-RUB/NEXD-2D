@@ -53,8 +53,3 @@ echo "Execute mesher..."
 ./bin/mesher
 
 echo "done at: `date`"
-
-
-
-
-

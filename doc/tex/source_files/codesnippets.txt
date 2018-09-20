@@ -1,0 +1,82 @@
+(sftMod)
+function stfRicker(t,f0,t0,factor)
+    implicit none
+    real(kind=custom_real) :: stfRicker
+    real(kind=custom_real) :: f0,t0,factor,t
+    real(kind=custom_real) :: aval
+    aval = pi*pi*f0*f0
+    stfRicker =  factor * (1.-2.*aval*(t-t0)**2.) * exp(-aval*(t-t0)**2.)
+end function stfRicker
+
+Lines 498 - 548 (timeloopMod)
+! choose source time function
+if (mesh%has_src) then
+    do i=1,src%nsrc
+        do it=1,par%nt
+            time = (float(it)-1.)*dt
+            if (src%srcstf(i) == 1) then !GAUSS
+                plotstf(it,1,i) = time
+                plotDiffstf(it,1,i) = time
+                plotstf(it,2,i) = -stfGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                plotDiffstf(it,2,i) = -stfDiffGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+            else if (src%srcstf(i) == 2) then !RICKER
+                plotstf(it,1,i) = time
+                plotDiffstf(it,1,i) = time
+                plotstf(it,2,i) = -stfRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                plotDiffstf(it,2,i) = -stfDiffRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+            else if (src%srcstf(i) == 3) then !SIN^3
+                plotstf(it,1,i) = time
+                plotDiffstf(it,1,i) = time
+                plotstf(it,2,i) = -stfSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                plotDiffstf(it,2,i) = -stfDiffSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+            else if (src%srcstf(i) > 4) then
+                call add(errmsg, 2, "Chose a valid source time function. Available functions are listed in the 'source' parameter file.", myname, "data/source")
+                call print(errmsg)
+                call stop_mpi()
+            end if
+        end do
+        if (src%srcstf(i) == 4) then
+            filename=src%extwavelet(i)
+            call stfExternal(plotstf(:,2,i),plotstf(:,1,i),dt,par%nt,.true.,6,3,trim(filename),0, errmsg)
+            call stfExternal(plotDiffstf(:,2,i),plotDiffstf(:,1,i),dt,par%nt,.true.,6,3,trim(filename),1, errmsg)
+        end if
+        [...]
+    end do
+end if
+
+671 - 691 (timeloopMod)
+do i=1, src%nsrc
+    if (src%srcstf(i) == 1) then
+        stf_val = -stfGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+        stf_val_diff = -stfDiffGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+    else if (src%srcstf(i) == 2) then !RICKER
+        stf_val = -stfRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+        stf_val_diff = -stfDiffRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+    else if (src%srcstf(i) == 3) then !Sin^3
+        stf_val = -stfSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+        stf_val_diff = -stfDiffSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+    end if
+    if (src%srcstf(i) == 4) then
+        if (it<par%nt) then
+            stf_val=(1.-rk_time)*plotstf(it,2,i)+rk_time*plotstf(it+1,2,i)
+            stf_val_diff=(1.-rk_time)*plotDiffstf(it,2,i)+rk_time*plotDiffstf(it+1,2,i)
+        else
+            stf_val=(1.+rk_time)*plotstf(it,2,i)-rk_time*plotstf(it-1,2,i)
+            stf_val_diff=(1.+rk_time)*plotDiffstf(it,2,i)-rk_time*plotDiffstf(it-1,2,i)
+        endif
+    end if
+enddo
+
+113 - 124 (sourceReceiverMod)
+call readIntPar(this%srcstf(isrc), "stf", filename, pos, errmsg)
+if( this%srcstf(isrc) < 1 .or. this%srcstf(isrc) > 4) then
+    !this message needs to be adjusted if new wavelets are added to the Program
+    call add(errmsg, 2, "Parameter to select the source time function is out of range. Select either 1, 2, 3 or 4.", myname, filename)
+end if
+if (this%srcstf(isrc) == 4) then
+    call readStringPar(this%extwavelet(isrc), "extwavelet", filename, pos, errmsg)
+    inquire(file=trim(this%extwavelet(isrc)), exist=file_exists)
+    if (.not. file_exists) then
+        call add(errmsg, 2, "File does not exist!", myname, filename)
+    end if
+end if

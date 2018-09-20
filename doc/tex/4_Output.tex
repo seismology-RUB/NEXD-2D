@@ -1,0 +1,84 @@
+\chapter{Output}
+\label{chap:output}
+	By default, the output of NEXD 2D is stored in a subdirectory to the simulation directory called "out". If the script "process.sh" is used, the parameter files used for the current simulation are copied to the "out" folder for the users convenience. That way, the user is always able to reconstruct what parameters were used to create this simulation. 
+	
+	\section{Files created by \texttt{mesher}}
+	\label{sec:mesher}
+		For every simulation, files containing information of parts of the mesh called "meshVar0000001" are created. The number denotes the running number of the processor the file was created for.
+		
+		If stations are placed in the model, files are created that contain the information on the location of the station, where it is located in the mesh and in which processor the receiver is located. These files are called for example "recVar000013".
+		
+		If fractures are included, files that map the slip interfaces to their elements called for example "elementToLSI000032" will be created as well.
+		
+		A number of visualisation files are created. They are listed in table \ref{tab:vtk_files}.
+		\begin{table}[ht]
+   			\centering
+    		\caption{List of vtk-files given as output.}
+    		\label{tab:vtk_files}
+    		\begin{tabular}{@{} l p{5cm} @{}}
+        		\toprule
+        		\multicolumn{1}{c}{Name} & Content\\ 
+        		\midrule
+        		mesh.vtk & triangular mesh \\
+        		rec.vtk & receiver positions \\    
+       			src.vtk & source positions \\
+        		rho\_model.vtk & density model \\
+        		vp\_model.vtk & p-wave velocity model \\
+        		vs\_model.vtk & s-wave velocity model \\
+        		\bottomrule
+    		\end{tabular}
+		\end{table}
+		In addition to these vtk-files, postscript files will be created for each part of the mesh, if "debug" is set to true in the parfile.
+	\section{Files created by \texttt{solver}}
+	\label{sec:solver}
+		The output from \texttt{solver} varies with the parameters selected in the parameter files. Seismograms will be created, if stations are placed in the model and the correct parameters have been set. Binary files to generate visualisations of the wave-field are only generated if the appropriate parameters are set in the "movie" portion of the parameter file (see section \ref{subsubsec:moviepar}).
+		
+		\subsection{Seismograms}
+			Seismograms are saved as plain ASCII text files with two columns of data: The first column contains the time-axis and the second column contains the respective data. Three types of data are available: displacement, particle velocity and acceleration. Each type has its own file distinguished by the file name. The file-name is constructed in the following way:
+			\begin{center}%[4cm]{4cm}% 1em left, 2em right
+				\emph{seismo.(component).(number of the station).sd(type)}
+			\end{center}
+			The component is either "x" or "z". If the parameter div and/or curl are enabled this may also be "r" or "t" respectively, where "r" is the radial and "t" the tangential component. The number of the station is a seven-digit running number starting from 0000001 the the total number of stations (cf., nrec in sec.~\ref{subsec:stations}) placed in the model. The file extension .sd* tells the user which kind of data is contained in the file: "a" for acceleration, "v" for particle velocity and "u" for displacement.\\
+			
+			\fcolorbox{green}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Example}: Given these conventions, a seismogram for the x-component of station 23 containing displacement data is named: \emph{seismo.x.0000023.sdu}.}}
+			
+		\subsection{Binary file to create vtk files}
+		\label{subsec:binvtk}
+			The exact amount and type of binary files created by \texttt{solver} depends on the choice of parameters. First of all, the parameter "movie" needs to be enabled so that any file may be created. If that is the case, a file is created for each time-step matching the "frame" parameter per processor. \\
+			\\
+			\fcolorbox{green}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Example}: If frame = 100, a file will be created for each 100th time-step. }} \\
+			\\
+			Additionally, the user can enable the creation of binary files for acceleration, particle velocity and/or displacement. If either is selected, files will be created that contain the x-component, the z-component and the norm of the selected property, respectively. The files are named in the following way:
+			\begin{center}%[3cm]{3cm}% 1em left, 2em right
+				\emph{moviedata.(type)(component).(number of the processor)\_it(time-step).bin}
+			\end{center} 
+			Here, type is again "a", "v" or "u", the component is "x", "z" or "norm". In case of the norm, type and component are reversed. The number of processor is a six-digit number of the processor that created the file and time-step is a seven-digit number that describes the time-step that the file represents. \\
+
+			\fcolorbox{green}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Example}: Given these conventions, a movie-binary file for the x-component of the particle velocity created in processor 23 at time-step 4000 is named: \emph{moviedata\_vx\_000023\_it0004000.bin}. If case of the norm, but otherwise identical parameters the file is named: \emph{moviedata\_normV\_000023\_it0004000.bin}.}}
+			
+	\section{Files created by \texttt{movie}}
+	\label{sec:movieout}
+		There are two possible outputs: 
+		\begin{itemize}
+			\item trimesh: Creates file, where the average  over an element is plotted.
+			\item point: Creates files, which contain the information on each grid point.
+		\end{itemize}
+		Both variants can be used independently and together.
+					
+		\subsection{trimesh files}
+			This version of the wave filed output is enabled by selecting the parameter "save\_movie\_trimesh". The files are named in the following way:
+			\begin{center}%[3cm]{3cm}% 1em left, 2em right
+				\emph{movie\_element\_(type)(component)\_it(framenumber).vtk}
+			\end{center}
+			The part of the filename containing type and component follows the same pattern as above. The frame-number is a seven-digit number that increases sequentially. \\
+
+			\fcolorbox{green}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Example}: Given these conventions, the $4^{th}$ movie-vtk for the x-component of the particle velocity is called: \emph{movie\_element\_vx\_it0000004.vtk}. In case of the norm, but otherwise identical parameters the file is called: \emph{movie\_element\_norm\_v\_it0000004.vtk}.}}
+		
+		\subsection{points files}
+			This version of the wave-field output takes significantly more computational time as well as space on the hard-disk, but contains more detailed information. It is enabled by selecting the parameter "save\_movie\_points". The files are named in the following way:
+			\begin{center}%[3cm]{3cm}% 1em left, 2em right
+				\emph{movie\_points\_(type)(component)\_it(framenumber).vtk}
+			\end{center}
+			The part of the filename containing type and component follows the same pattern as above. The frame-number is a seven-digit number that increases sequentially. \\
+
+			\fcolorbox{green}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Example}: Given these conventions, the $4^{th}$ movie-vtk for the x-component of the particle velocity is named: \emph{movie\_points\_vx\_it0000004.vtk}. In case of the norm, but otherwise identical parameters the file is named: \emph{movie\_points\_norm\_v\_it0000004.vtk}.}} \\

@@ -1,21 +1,23 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module warpfactorMod
     ! module to calculate the warp factors for interpolation in the triangle with quasi gll points
     use constantsMod
@@ -60,9 +62,9 @@ module warpfactorMod
             ! scale warp factor
             zerof = abs(xout(k)) < (1.0-EPS)
             if (zerof) then
-                zeroff=1.0
+                zeroff=1
             else
-                zeroff=0.0
+                zeroff=0
             end if
             sf = 1.0-(zeroff*xout(k))**2
             warpfactor(k)=warp(k)/sf + warp(k)*(zeroff-1.0)

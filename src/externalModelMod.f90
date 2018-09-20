@@ -1,22 +1,24 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module externalModelMod
+    use constantsMod
+    use matrixMod
     implicit none
 
     contains
@@ -29,19 +31,24 @@ module externalModelMod
         ! based on the x and y coordinates of that grid point and the flag of the region it belongs to
 
         !  integer, intent(in) :: iflag_element,myrank
+
+        !input
         integer :: iflag_element
-
-        real, intent(in) :: x,y
-
-        real, intent(out) :: rho,vp,vs
-        integer :: cnt,is,ks,nx,nz,i,k
-        integer, dimension(nx,nz) :: ipolg
-        real, dimension(nx,nz) :: rhog,vpg,vsg
-        real, dimension(nx) :: xg
-        real, dimension(nz) :: zg
-        real, dimension(4) :: xc,yc,xi
+        integer :: nx,nz
+        integer, dimension(:,:) :: ipolg
+        real(kind=custom_real) :: xmin,zmin,dx,dz
+        real(kind=custom_real), intent(in) :: x,y               !Centroid coordinates of the triangle
+        real(kind=custom_real), dimension(:) :: xg
+        real(kind=custom_real), dimension(:) :: zg
+        real(kind=custom_real), dimension(:,:) :: rhog,vpg,vsg
+        !output
+        real(kind=custom_real), intent(out) :: rho,vp,vs
+        !local
+        integer :: cnt,is,ks,i,k
+        real(kind=custom_real), dimension(4) :: xc,yc,xi
         integer, dimension(4) :: isinp,ksinp
-        real :: xmin,zmin,dx,dz,bx,bz,d,xs,zs
+        real(kind=custom_real) ::bx,bz,d,xs,zs
+        !LL LL test
 
         xs = x*1.e-3
         zs = -y*1.e-3
@@ -68,6 +75,10 @@ module externalModelMod
             enddo
         enddo
 
+        if (cnt == 0) then
+            print *,'Warning in define_external_model: no grid point in iflag-region ',is,ks,ipolg(is,ks),iflag_element
+            cnt = 1 ! take nearest point
+        endif
         !  take value at this single point
         if (cnt == 1) then
             xi(1) = 1.

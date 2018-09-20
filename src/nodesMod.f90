@@ -1,21 +1,21 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module nodesMod
     ! module to create warp and blend nodes in equi tri
     use constantsMod
@@ -61,12 +61,12 @@ module nodesMod
         warpfactor1 = warpfactor(xgll, L3(:)-L2(:))
         warpfactor2 = warpfactor(xgll, L1(:)-L3(:))
         warpfactor3 = warpfactor(xgll, L2(:)-L1(:))
-    
+
         ! combine blend and warp
         warp1(:) = blend1(:)*warpfactor1(:)*(1.0+(alpha*L1(:))**2)
         warp2(:) = blend2(:)*warpfactor2(:)*(1.0+(alpha*L2(:))**2)
         warp3(:) = blend3(:)*warpfactor3(:)*(1.0+(alpha*L3(:))**2)
-    
+
         ! accumulate deformations associated with each edge
         x(:) = x(:) + 1.0*warp1(:) + cos(2.0*PI/3.0)*warp2(:) + cos(4.0*PI/3.0)*warp3(:)
         y(:) = y(:) + 0.0*warp1(:) + sin(2.0*PI/3.0)*warp2(:) + sin(4.0*PI/3.0)*warp3(:)

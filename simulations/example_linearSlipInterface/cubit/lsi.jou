@@ -1,0 +1,64 @@
+reset
+
+###################################
+
+#model
+create vertex 0 0 0
+create vertex 50 0 0
+create vertex 50 25 0
+create vertex 50 50 0
+create vertex 0 50 0
+create vertex 0 25 0
+
+create surface vertex 1 2 3 6 
+create surface vertex 6 3 4 5 
+
+###################################
+#pml
+webcut volume all with plane normal to curve 1 distance 3 from vertex 1
+webcut volume all with plane normal to curve 4 distance 3 from vertex 1
+webcut volume all with plane normal to curve 10 distance 3 from vertex 2
+
+###################################
+
+#meshing
+
+imprint all
+merge all
+surf all size 1.0
+surface all scheme TriDelaunay
+mesh surface all
+
+###################################
+# materials
+# allows for elements to be part of multiple blocks
+set duplicate block elements on
+
+block 1 tri in surf 14 16
+block 2 tri in surf 6 9 10 11 12 13 15
+
+# name nr vp vs rho qp qs pml
+block 1 name "elastic 1 5800 3800 2600 9999 9999 0"
+block 2 name "elastic 2 5800 3800 2600 9999 9999 1"
+
+###################################
+#edges
+nodeset 1 node in curve 19 41 43
+nodeset 2 node in curve 5 6 7 8 14 23 25 28 32 34 38
+
+nodeset 1 name "free_surf"
+nodeset 2 name "absorb"
+
+save as "lsi.cub" overwrite
+
+
+
+
+
+
+
+
+
+
+
+

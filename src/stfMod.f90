@@ -1,86 +1,94 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
-!   Copyright 2014-2017 Marc S. Boxberg (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module stfMod
 
+    use constantsMod
     use fileunitMod
     use errorMessage
-    implicit none
 
+    implicit none
 
     contains
 
     function stfRicker(t,f0,t0,factor)
         implicit none
-        include 'constants.h'
-        real :: stfRicker
-        real :: f0,t0,factor,t
-        real :: aval
+        real(kind=custom_real) :: stfRicker
+        real(kind=custom_real) :: f0,t0,factor,t
+        real(kind=custom_real) :: aval
         aval = pi*pi*f0*f0
         stfRicker =  factor * (1.-2.*aval*(t-t0)**2.) * exp(-aval*(t-t0)**2.)
     end function stfRicker
 
     function stfDiffRicker(t,f0,t0,factor)
         implicit none
-        include 'constants.h'
-        real :: stfDiffRicker
-        real :: f0,t0,factor,t
-        real :: aval
+        real(kind=custom_real) :: stfDiffRicker
+        real(kind=custom_real) :: f0,t0,factor,t
+        real(kind=custom_real) :: aval
         aval = pi*pi*f0*f0
         stfDiffRicker =  2*aval*factor*(t-t0)*exp(-aval*(t-t0)**2.)*(2*aval*(t-t0)**2-3)
     end function stfDiffRicker
 
     function stfGauss(t,f0,t0,factor)
         implicit none
-        include 'constants.h'
-        real :: stfGauss
-        real :: f0,t0,factor,t
-        real :: aval
+        real(kind=custom_real) :: stfGauss
+        real(kind=custom_real) :: f0,t0,factor,t
+        real(kind=custom_real) :: aval
         aval = pi*pi*f0*f0
         stfGauss = -factor * sqrt(pi) * f0 * exp(-aval*(t-t0)**2.)
     end function stfGauss
 
     function stfDiffGauss(t,f0,t0,factor)
         implicit none
-        include 'constants.h'
-        real :: stfDiffGauss
-        real :: f0,t0,factor,t
-        real :: aval
+        real(kind=custom_real) :: stfDiffGauss
+        real(kind=custom_real) :: f0,t0,factor,t
+        real(kind=custom_real) :: aval
         aval = pi*pi*f0*f0
         stfDiffGauss = factor * sqrt(pi) * f0 * 2. * aval * (t-t0) * exp(-aval*(t-t0)**2.)
     end function stfDiffGauss
 
     function stfSin3(t,f0,t0,factor)
         implicit none
-        include 'constants.h'
-        real :: stfSin3
-        real :: f0,t0,factor,t
+        real(kind=custom_real) :: stfSin3
+        real(kind=custom_real) :: f0,t0,factor,t
         if (t < (1.0/f0)) then
-            stfSin3 = factor * sin(pi*t*f0)**3
+            stfSin3 = factor * sin(pi*(t-t0)*f0)**3
         else
             stfSin3 = 0.0
         end if
     end function stfSin3
 
+    function stfDiffSin3(t,f0,t0,factor)
+        implicit none
+        real(kind=custom_real) :: stfDiffSin3
+        real(kind=custom_real) :: f0,t0,factor,t
+        if (t < (1.0/f0)) then
+            stfDiffSin3 = factor * 3 * sin(pi*(t-t0)*f0)**2 * cos(pi*(t-t0)*f0)**2
+        else
+            stfDiffSin3 = 0.0
+        end if
+    end function stfDiffSin3
+
     subroutine stfExternal(dnew,tnew,dt,nt,filter,w,nl,filename,differentiate, errmsg)
         implicit none
-        include 'constants.h'
         type(error_message) :: errmsg
         real(kind=CUSTOM_REAL) :: dt
         integer :: nt,w,nl
@@ -128,7 +136,7 @@ module stfMod
             read(fu,*) time(i),data(i)
         end do
         close(fu)
-    
+
         dt_old = time(2)-time(1)
         t0 = time(1)
 
@@ -176,7 +184,7 @@ module stfMod
         real(kind=CUSTOM_REAL) :: x, lanczos
         integer :: l
 
-        if (x==0) then
+        if (x < epsilon(x)) then
             lanczos=1.0
         else if (abs(x) < l) then
             lanczos = sin(pi*x)/(pi*x) * sin((pi*x)/l)/((pi*x)/l)
@@ -192,7 +200,7 @@ module stfMod
         integer :: i,j,n,m
 
         real(kind=CUSTOM_REAL) :: temp
-    
+
         do i=1,nt
             if (i<=w) then
                 n=1

@@ -1,24 +1,24 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
-!   Copyright 2014-2017 Thomas Möller (Ruhr-Universitaet Bochum, Germany)
-!   Copyright 2015-2017 Andre Lamert (Ruhr-Universitaet Bochum, Germany)
-!   Copyright 2016 Elena Busch (Rice University, United States)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2016 Elena Busch (Rice University, USA)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module collectMovieMod
     use parameterMod
     use meshMod
@@ -26,7 +26,7 @@ module collectMovieMod
     use errorMessage
     use progressbarMod
     use plotMod
-    
+
     implicit none
 
     contains
@@ -38,11 +38,8 @@ module collectMovieMod
         type(error_message) :: errmsg
         !local
         type(meshVar),dimension(:), allocatable :: db
-        integer, pointer :: nproc
         integer :: iproc
-        integer, pointer :: nt
-        integer :: nstep
-        integer :: it,nframe,c,d,e,i
+        integer :: nframe,c,d,e,i
         integer, dimension(:), allocatable :: ndata,ndata2,ndata3
         ! file
         logical :: file_exists
@@ -92,13 +89,13 @@ module collectMovieMod
                 call readMeshVar(db(iproc),filename, errmsg)
 
             else
-                call add(errmsg, 2, "Error in the database. File "//trim(filename)//" do not exist. Abort...", myname)
+                call add(errmsg, 2, "Error in the database. File "//trim(filename)//" does not exist.", myname, filename)
                 if (.level.errmsg == 2) then; call print(errmsg); stop; endif
            end if
         end do
         if (par%log) write (*, "(a80)") "|------------------------------------------------------------------------------|"
-        
-        ! get pointers    
+
+        ! get pointers
         glob_nelem=0
         glob_nglob=0
         glob_ncoord=0
@@ -110,7 +107,7 @@ module collectMovieMod
             ndata2(iproc) = db(iproc)%ncoord
             ndata3(iproc) = db(iproc)%nelem
         end do
-        
+
         allocate(xyzplot(3,glob_nglob))
 
         ! read coords
@@ -191,7 +188,7 @@ module collectMovieMod
             deallocate(ux)
             deallocate(uz)
         end if
-        
+
         if (movie%velocity) then
             if (par%log) write (*,*) "Creating Velocity files"
             allocate(vplot(glob_nglob,nframe))
@@ -216,7 +213,7 @@ module collectMovieMod
             deallocate(vel_x)
             deallocate(vel_z)
         end if
-        
+
         if (movie%stress) then
             if (par%log) write (*,*) "Creating Stress files"
             allocate(sigmaxx(glob_nglob,nframe))
@@ -250,7 +247,7 @@ module collectMovieMod
         if (allocated(glob_elem)) deallocate(glob_elem)
         if (allocated(glob_coord)) deallocate(glob_coord)
     end subroutine collectMovie
-    
+
     subroutine readplotbin(nproc,nstep,nt,errmsg,dat,name1,glob_nglob,nframe,ndata)
         !input
         integer :: nproc
@@ -260,15 +257,15 @@ module collectMovieMod
         integer :: nstep
         type(error_message) :: errmsg
         character(len=*) :: name1
-        
+
         real(kind=CUSTOM_REAL), dimension(glob_nglob,nframe):: dat
         integer, dimension(:):: ndata
         !local
         integer :: iproc, c, it,e,d
-        
+
         d=1
         e=ndata(1)
-        
+
         do iproc=1,nproc
             c=1
             do it=nstep,nt,nstep

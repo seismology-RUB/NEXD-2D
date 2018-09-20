@@ -1,0 +1,44 @@
+README - Slip interface example
+
+This example illustrates the capability of NEXD 2D to simulate wave propagation across fractures using linear slip interfaces. This README is an instruction to the user on how to use this example and to avoid unnecessary errors. It covers the parameter settings for simulations containing slip interfaces only. Regarding the other parameters, the user is referred to the documentation of the basic examples.
+
+Additional parameters in the standard parfile:
+    * fluxtype: Parameter to select the Riemann fluxes developed for the slip interfaces.
+    * lsi: Set ".true." if fractures should be included in the simulation
+    * normal: Set ".true." to enable the compliance component normal to the fracture
+    * tangential: Set ".true." to enable the compliance component tangential to the fracture
+
+Required settings for the parfile:
+The following parameters need to be set in a specific way for the simulations to work:
+    * strongform: ".true.", slip interface fluxes are only developed for the strong form of the DG equation.
+    * fluxtype: "0", see above
+    * attenuation: ".false.", at present the slip interface calculations do not support attenuation
+
+Additional parameter files:
+The simulations require two additional files that are supplied with this example:
+1) interfaces
+2) fracs
+
+"interfaces" specifies the basic parameters of the slip interfaces used to create a fracture. 
+A global parameter specifies the total number of different interfaces to be read in by the program.
+Each interface has these parameters:
+    * type: currently only "elastic", viscoelastic interfaces are under development
+    * thickness: The thickness of the crack is given in meters, e.g. 1mm requires something like 1.e-3 as input (0.001 would also work) 
+    * Elastic modulus: The elastic modulus is given in Pascal (Pa). Usually, values are in the order of GPa. For example, a value of 45.0 GPa requires 45.e9 as input.
+    * CN, CT: Dimensionless constants that are needed to calculate the relaxation frequency of the interface.
+
+Sample line:
+elastic 1.e-3  84.4e9   69959   106776
+
+"fracs" specifies the location of the fracture(s) in the mesh. 
+A global parameter specifies the total number of fractures. 
+Each fracture has the following parameters:
+    * No.: The number of the fracture
+    * Property index: Indicates the type of interface that creates the fracture. The interface is selected from the selection given in ?interfaces?. For example: If there are 4 different slip interfaces given in "interfaces" this number may be either 1, 2, 3 or 4. 
+    * x, and z coordinates of the starting point of the fracture
+    * x, and z coordinates of the end point of the fracture
+
+Sample line:
+001   1   0.0000   25.0   50.0   25.
+
+

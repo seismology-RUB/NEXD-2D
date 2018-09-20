@@ -1,0 +1,52 @@
+\chapter{Simulation}
+\label{chap:simulation}
+	This chapter explains a complete simulation and suggests an efficient order of tasks, including pre- and post-processing. To follow this chapter, a successful installation of NEXD and all its requirements is necessary (see chapter \ref{chap:installation}). It is assumed that the code has been compiled without errors. To run a simulation, follow these steps:
+	\begin{itemize}
+		\item Prepare your simulation (see section~\ref{sec:prep} below for more details).
+    	\item Prepare your model, either using Trelis and the supplied routines or a meshing software of your choice.
+    	\item Check if all parameter files are present (see chapter~\ref{chap:input} for more details).
+    	\item Run the preprocessor called \texttt{mesher} by executing the shell-script "process.sh" The present working directory of the console should be your simulation directory, e.g., \url{simulations/lambs}.
+   		 \item Run the solver (see section~\ref{sec:calc} for details).
+    	 \item If a visualisation apart from the seismograms is required, run \texttt{movie} by executing \url{./bin/movie} (see chapter~\ref{chap:output} for details).
+	\end{itemize}	 
+	\section{Preparation}
+	\label{sec:prep}
+		After a successful installation, the directory for the first simulation has to be prepared. Follow these steps to prepare the model and parameter files:
+		\begin{enumerate}
+			\item Create a simulation folder according to the structure displayed in the examples and provide the relevant input files.
+			\item Create the model and subsequent input files for \texttt{mesher} as described in appendix~\ref{chap:model}.
+			\item Change the appropriate files to individual specifications (see chapter~\ref{chap:input} for details).
+			\item Either copy the shell script "process.sh" to the new simulation directory and run it or follow the next steps.
+			\item Create the folders "bin" and "out" in the simulation directory
+			\item Copy the executable files \texttt{mesher}, \texttt{solver} and \texttt{movie} from \url{dg2d/bin/} to the \url{yourSimulation/bin} directory in the simulation directory or create a symbolic link to these executable files.
+			\item run \texttt{mesher} by executing the command "./bin/mesher" in the console.
+		\end{enumerate}
+		\fcolorbox{orange}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Recommendation}: If "process.sh" is not used, it is advised that the parameter files from the "data" directory are copied to the "out" folder prior to running \texttt{mesher} (between steps 6 and 7). That way all information on how the simulation was created is stored with the output.}}
+		
+	\section{Calculation}
+	\label{sec:calc}
+		This section is highly specialised for the individual user. Assuming that the user is able to run the program directly on his/her computer and OpenMPI is installed on the system there is only thing to do: 
+		\begin{itemize}
+			\item run \texttt{solver} by executing \texttt{mpirun -np (nproc) bin/solver}.
+		\end{itemize}
+		The parameter "nproc" gives the number of processors as defined in the parfile. This number \textit{must} be the same.
+		
+		If desired, information on the process of the simulation are printed on screen. For select time steps the output listed in code listing \ref{lis:time} is generated. These time steps are defined by the "frame" parameter from the movie-parameter section. Each time a frame for the movie is generated, the output is printed into the file.
+		It displays the time needed for the current interval, the estimated remaining time, the estimated total time and the mean elapsed time per time step. In addition an estimation is given on what date and time the simulation will be finished. This is particularly helpful for longer runs. 
+		
+		\lstinputlisting[
+    float=ht, 
+    captionpos=b, 
+    label=lis:time,
+    caption=Output for select time steps,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
+    ]{source_files/timestamp.txt}
+    	
+    \section{Evaluation}
+    \label{sec:eval}
+    	To view the seismograms, a program like GNUPLOT is sufficient. Python also offers an extended library on plotting such data.
+    	
+    	If created, the vtk files may be viewed by a program like ParaView. According to their website "ParaView is an open-source, multi-platform data analysis and visualization application.". It can be freely downloaded from the website \url{https://www.paraview.org/}. Otherwise a library called "vtk" exits for Python that contains functions to process and display vtk files. It is part of the Anaconda package but may be installed separately by the user.
+    	
+    	For the included examples, reference seismograms are provided. If one of the examples is run, they are a basis for comparison.

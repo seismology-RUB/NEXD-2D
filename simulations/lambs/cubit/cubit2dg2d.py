@@ -55,7 +55,7 @@ class mesh():
                     print('found elastic block')
                     imat=1
                 
-                # get number of attributes
+                    # get number of attributes
                     values=name.split(" ")
                     print values
                     flag=int(values[1])
@@ -64,16 +64,12 @@ class mesh():
                     rho=float(values[4])
                     qp=float(values[5])
                     qs=float(values[6])
+                    pml=float(values[7])
 
                     block_flag.append(flag)
+                    block_pmlflag.append(pml)
                     block_mat.append(block)
                     material.append([imat,vp,vs,rho,qp,qs])
-                elif name.find('pml') >=0:
-                    ipml=1
-                    values=name.split(" ")
-                    flag=int(values[1])
-                    block_pmlflag.append(flag)
-                    block_pml.append(block)
                 else:
                     print('error, no correct material in block',block)
 
@@ -86,13 +82,14 @@ class mesh():
             elif name.find('absorb') >=0:
                 print('found absorb surface nodes')
                 ns_absorb.append(n)
+            elif name.find('vtk') >=0:
+                pass
             else:
                 print('error in boundaries',n)
             
         print('BLOCKFLAG',block_flag)
         self.block_flag=block_flag
         self.block_mat=block_mat
-        self.block_pml=block_pml
         self.block_pmlflag=block_pmlflag
         self.mat=material
         self.ns_free=ns_free
@@ -123,16 +120,10 @@ class mesh():
     def mat_write(self,mat_name):
         nelem=cubit.get_tri_count()
         element=[ [0,0,0] for i in range(nelem)]
-        for block,flag in zip(self.block_mat,self.block_flag):
+        for block,flag,pmlflag in zip(self.block_mat,self.block_flag,self.block_pmlflag):
             tris=cubit.get_block_tris(block)
             for tri in tris:
-                element[tri-1] = [tri,flag,0]
-
-        for block,flag in zip(self.block_pml,self.block_pmlflag):
-            tris=cubit.get_block_tris(block)
-            for tri in tris:
-                element[tri-1][2] = flag
-
+                element[tri-1] = [tri,flag,pmlflag]
         mat=open(mat_name,'w')
         print('Writing '+mat_name+'.....')
         for i in range(nelem):
@@ -148,20 +139,36 @@ class mesh():
         meshfile.write(str(nelem)+'\n')
         num_write=0
         temp_tri=[]
+        trilength=1
+        for block,flag in zip(self.block_mat,self.block_flag):
+            trilength += len(cubit.get_block_tris(block))
+        tri_vp=range(trilength)
+        tri_vs=range(trilength)
+        tri_rho=range(trilength)
+        tri_qp=range(trilength)
+        tri_qs=range(trilength)
+        tri_block=range(trilength)
         for block,flag in zip(self.block_mat,self.block_flag):
             tris=cubit.get_block_tris(block)
+            name=cubit.get_exodus_entity_name('block',block)
+            type=cubit.get_block_element_type(block)
             for tri in tris:
                 nodes=cubit.get_connectivity('Tri',tri)
                 temp_tri.append(tri)
-#                txt=('%10i ')% tri
-#                txt=txt+('%10i %10i %10i\n')% nodes[:]
- #               meshfile.write(txt)
-
+                values=name.split(" ")
+                tri_vp[tri]=float(values[2])
+                tri_vs[tri]=float(values[3])
+                tri_rho[tri]=float(values[4])
+                tri_qp[tri]=float(values[5])
+                tri_qs[tri]=float(values[6])
         temp_tri.sort()
         for tri in temp_tri:
             nodes=cubit.get_connectivity('Tri',tri)
             txt=('%10i ')% tri
             txt=txt+('%10i %10i %10i\n')% nodes[:]
+            # This is later needed for the inversion feature:
+            #txt=txt+('%10i %10i %10i')% nodes[:]
+            #txt=txt+(' %9.1f %9.1f %9.1f %5i %5i\n') % (tri_vp[tri],tri_vs[tri],tri_rho[tri],tri_qp[tri],tri_qs[tri])
             meshfile.write(txt)
 
 
@@ -191,29 +198,34 @@ class mesh():
     def absorb_write(self,absorb_name):
         absorbfile=open(absorb_name,'w')
         print('writing '+absorb_name)
-        
-        for n in self.ns_absorb:
-            nodes_absorb=cubit.get_nodeset_nodes(n)
-        nabs=len(nodes_absorb)
-        absorbfile.write(str(nabs)+'\n')
-        print('Number of absorbing nodes ',nabs)
 
-        for node in nodes_absorb:
-            absorbfile.write(str(node)+'\n')
+        if self.ns_absorb!=[]:
+            for n in self.ns_absorb:
+                nodes_absorb=cubit.get_nodeset_nodes(n)
+            nabs=len(nodes_absorb)
+            absorbfile.write(str(nabs)+'\n')
+            print('Number of absorbing nodes ',nabs)
+            for node in nodes_absorb:
+                absorbfile.write(str(node)+'\n')
+        else:
+            absorbfile.write(str(0)+'\n')
+            print('Number of absorbing nodes ',0)
 
     def free_write(self,free_name):
         freefile=open(free_name,'w')
         print('writing '+free_name)
-        
-        for n in self.ns_free:
-            nodes_free=cubit.get_nodeset_nodes(n)
-        nfree=len(nodes_free)
-        freefile.write(str(nfree)+'\n')
-        print('Number of free nodes ',nfree)
 
-        for node in nodes_free:
-            freefile.write(str(node)+'\n')
-
+        if self.ns_free!=[]:
+            for n in self.ns_free:
+                nodes_free=cubit.get_nodeset_nodes(n)
+            nfree=len(nodes_free)
+            freefile.write(str(nfree)+'\n')
+            print('Number of free nodes ',nfree)
+            for node in nodes_free:
+                freefile.write(str(node)+'\n')
+        else:
+            freefile.write(str(0)+'\n')
+            print('Number of free nodes ',0)
         
 
 

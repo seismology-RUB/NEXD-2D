@@ -1,0 +1,8 @@
+100.	#length nx
+20.	#length nz
+100	#nnodes-1 on boundray x
+20	#nnodes-1 on boundray z
+1                            !number of materials(1 at the moment)
+1 2200.                         !rho (homogenius at the moment)
+1 3200.                         !vp
+1 1847.5                       !vs

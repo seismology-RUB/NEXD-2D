@@ -1,21 +1,23 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module simplexMod
     ! Evaluate 2D orthonormal polynomial on simplex at (a,b) oft order (i,j)
     use constantsMod
@@ -29,10 +31,11 @@ module simplexMod
         real(kind=CUSTOM_REAL), dimension(:), intent(out) :: Pr
         real(kind=CUSTOM_REAL), dimension(:), intent(in):: a,b
         real(kind=CUSTOM_REAL), dimension(size(a)) :: h1,h2
+
         integer, intent(in) :: i,j
 
-        call jacobiP(h1,a,0.0,0.0,i)
-        call jacobiP(h2,b,2.0*i+1.0,0.0,j)
+        call jacobiP(h1,a,zero,zero,i)
+        call jacobiP(h2,b,two*i+one,zero,j)
 
         Pr(:) = sqrt(2.0)*h1*h2*(1.0-b)**i
     end subroutine simplex2DP
@@ -46,10 +49,10 @@ module simplexMod
         real(kind=CUSTOM_REAL), dimension(size(b)) :: gb,dgb
         real(kind=CUSTOM_REAL), dimension(size(a)) :: temp
 
-        call jacobiP(fa,a,0.0,0.0,id)
-        call gradJacobiP(dfa,a,0.0,0.0,id)
-        call jacobiP(gb,b,2.0*id+1.0,0.0,jd)
-        call gradJacobiP(dgb,b,2.0*id+1.0,0.0,jd)
+        call jacobiP(fa,a,zero,zero,id)
+        call gradJacobiP(dfa,a,zero,zero,id)
+        call jacobiP(gb,b,two*id+one,zero,jd)
+        call gradJacobiP(dgb,b,two*id+one,zero,jd)
 
         ! r-deriverate
         !d/dr = da/dr d/da + db/dr d/db = (2/(1-s)) d/da = (2/(1-b)) d/da
@@ -66,13 +69,13 @@ module simplexMod
         if (id>0) then
             dPds(:)=dPds(:)*((0.5*(1.0-b(:)))**(id-1.0))
         end if
-    
+
         temp(:) = dgb(:)*((0.5*(1.0-b(:)))**id)
         if (id>0) then
             temp(:)=temp(:)-0.5*id*gb(:)*((0.5*(1.0-b(:)))**(id-1.0))
         end if
         dPds(:) = dPds(:)+fa(:)*temp(:)
-    
+
         !normalize
         dPdr(:) = 2.0**(id+0.5)*dPdr(:)
         dPds(:) = 2.0**(id+0.5)*dPds(:)

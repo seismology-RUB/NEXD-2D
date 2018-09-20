@@ -1,0 +1,54 @@
+\chapter{Adding a custom source time function}
+\label{chap:addstf}
+	It may become necessary for certain users to add a source time function of their own. This chapter describes, which section of the source code and what entries in the parameter files need to be changed.   
+	\section{Source code}
+	\label{sec:srcCode}
+		There are a number of portions of the source code that need to be changed. It is not simply done by adding the function itself, but also modifying the related error messages, so the new function is not rejected. First, the new source time function needs to be added as an additional function in the module "stfMod.f90". It is recommended that the basic structure of the function is similar to the already existing ones. As a basic example the function describing a Ricker-wavelet is shown in code listing \ref{lis:ricker} \\
+		\lstinputlisting[
+        float=ht, 
+        captionpos=b, 
+        label=lis:ricker, 
+        caption=Code for the Ricker wavelet., 
+        firstline=1, 
+        lastline=9,
+        breaklines=true,
+        postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}
+    ]{source_files/codesnippets.txt} \\
+    As described in the section~\ref{subsec:source}, each source time function is called by a specific number. If an additional function is added, that number increases. There are a number of sections in the code where that number influences the calculations. 
+    The first occasion is in the subroutine \emph{initSource} in the module \emph{sourceReceiverMod}. The relevant code is displayed in code listing \ref{lis:srcRec}. Edit the call to the if-condition (line 114) to accept larger values. Edit the error-message (line 116) accordingly.
+		\lstinputlisting[
+        float=ht, 
+        captionpos=b, 
+        label=lis:srcRec, 
+        caption=Code snippet from \emph{initSource}.,
+        firstnumber = 113, 
+        firstline=71, 
+        lastline=82,
+        breaklines=true,
+        postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}
+    ]{source_files/codesnippets.txt}
+    
+    The next occasions are in the module \emph{timeloopMod}. Here, the source code has to be changed at two locations. First between lines 498 and 548 (see code listing \ref{lis:timeloop1}). A new statement to the if call starting at line 503 needs to be added in the same way as the previous ones so to make the new stf available for further calculations. The number in the last segment (line 518) needs to be increased as well. \\
+    \lstinputlisting[
+        float=ht, 
+        captionpos=b, 
+        label=lis:timeloop1, 
+        caption=Code snippet from \emph{timeloopMod} (1).,
+        firstnumber = 498, 
+        firstline=12, 
+        lastline=45,
+        breaklines=true,
+        postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}
+    ]{source_files/codesnippets.txt}
+ 	The final piece of code that needs editing is between lines 671 and 691 in \emph{timeloopMod} (code listing \ref{lis:timeloop2}. In much the same way as in the previous code segment of \emph{timeloopMod}, the if statement starting at line 672 needs to be expanded to include the new function in the same way as it is designed for the included source time functions. At this point, no error message has to be updated. 
+ 	\lstinputlisting[
+        float=ht, 
+        captionpos=b, 
+        label=lis:timeloop2, 
+        caption=Code snippet from \emph{timeloopMod} (2).,
+        firstnumber = 671, 
+        firstline=48, 
+        lastline=68,
+        breaklines=true,
+        postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}
+    ]{source_files/codesnippets.txt}

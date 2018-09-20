@@ -1,25 +1,27 @@
-!--------------------------------------------------------------------------
-!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universitaet Bochum, Germany)
+!-----------------------------------------------------------------------
+!   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
-!   NEXD 2D is free software: you can redistribute it and/or modify it 
-!   under the terms of the GNU General Public License as published by the 
-!   Free Software Foundation, either version 3 of the License, or (at your 
-!   option) any later version.
+!   This program is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
 !
-!   NEXD 2D is distributed in the hope that it will be useful, but WITHOUT
-!   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-!   FITNESS FOR A PARTICULAR PURPOSE. 
-!   See the GNU General Public License for more details.
+!   This program is distributed in the hope that it will be useful, but
+!   WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!   GNU General Public License for more details.
 !
-!   You should have received a copy of the GNU General Public License v3.0
+!   You should have received a copy of the GNU General Public License
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
-!--------------------------------------------------------------------------
+!-----------------------------------------------------------------------
 module vtkMod
     ! module to create files in VTK format which can be read by paraview
     use constantsMod
-    
+
     implicit none
 
     contains
@@ -55,7 +57,7 @@ module vtkMod
         write(19,'(a,i12)') "CELL_TYPES ",nelem
         write(19,*) (10,i=1,nelem)
         write(19,*) ""
-    
+
         write(19,'(a,i12)') "CELL_DATA ",nelem
         write(19,'(a)') "SCALARS data integer"
         write(19,'(a)') "LOOKUP_TABLE default"
@@ -152,45 +154,6 @@ module vtkMod
         close(19)
     end subroutine writeVtkTriMeshRealdata
 
-    subroutine writeVtkTriMeshRealdataBin(filename, elem, coord, data)
-        character(len=*) :: filename
-        real(kind=CUSTOM_REAL), dimension(:,:) :: coord
-        real(kind=CUSTOM_REAL), dimension(:) :: data
-        integer, dimension(:,:) :: elem
-        integer :: nelem, ncoord
-        !! generate newline char
-        character(1) :: lf=char(10)
-        character(len=256) :: temp
-
-        nelem=size(elem(1,:))
-        ncoord=size(coord(1,:))
-
-        open(19,file=trim(filename),access='stream',status='unknown',convert='big_endian')
-        write(19) '# vtk DataFile Version 3.1',lf
-        write(19) 'Mesh with Data',lf
-        write(19) 'BINARY',lf
-        write(19) 'DATASET UNSTRUCTURED_GRID',lf
-        write(temp,fmt='(a,i12,a)') 'POINTS ', ncoord, ' float'
-        write(19) trim(temp),lf
-        !write(19) coord(1,:),coord(2,:),coord(3,:)
-        write(19) coord
-
-        write(temp,fmt='(a,i12,i12)') "CELLS ",nelem,nelem*4
-        write(19) trim(temp),lf
-    
-        write(19) elem-1
-        !write(19) 3,elem(1,i)-1,elem(2,i)-1,elem(3,i)-1
-        !write(temp,fmt='(a,i12)') "CELL_TYPES ",nelem
-        !write(19) trim(temp),lf
-        !write(19) (5,i=1,nelem)
-        !write(temp,fmt='(a,i12)') "CELL_DATA ",nelem
-        !write(19) trim(temp),lf
-        !write(19) "SCALARS data float",lf
-        !write(19) "LOOKUP_TABLE default",lf
-        !write(19) data
-        close(19)
-    end subroutine writeVtkTriMeshRealdataBin
-
     subroutine writeVtkTriMeshRealdata2D(filename, elem, coord, data)
         character(len=*) :: filename
         real(kind=CUSTOM_REAL), dimension(:,:) :: coord
@@ -224,7 +187,7 @@ module vtkMod
             write(19,*) 5
         end do
         write(19,*) ""
-    
+
         write(19,'(a,i12)') "CELL_DATA ",nelem
         write(19,'(a)') "SCALARS data float"
         write(19,'(a)') "LOOKUP_TABLE default"
@@ -242,7 +205,7 @@ module vtkMod
         integer :: i
 
         n=size(x)
-    
+
         open(19,file=trim(filename),status='unknown')
         write(19,'(a)') '# vtk DataFile Version 3.1'
         write(19,'(a)') 'Mesh with Data'
@@ -266,9 +229,9 @@ module vtkMod
         real(kind=CUSTOM_REAL), dimension(:) ::x,y,z,data
         integer :: n
         integer :: i
-    
+
         n=size(x)
-    
+
         open(19,file=trim(filename),status='unknown')
         write(19,'(a)') '# vtk DataFile Version 3.1'
         write(19,'(a)') 'Mesh with Data'
@@ -298,9 +261,9 @@ module vtkMod
         real(kind=CUSTOM_REAL), dimension(:) ::x,y,z,data
         integer :: n
         integer :: i
-    
+
         n=size(x)
-    
+
         open(19,file=trim(filename),status='unknown',form='UNFORMATTED')
         write(19) '# vtk DataFile Version 3.1'
         write(19) 'Mesh with Data'
@@ -324,4 +287,40 @@ module vtkMod
         write(19) ""
         close(19)
     end subroutine writeVtkNodesRealDataBin
+
+    subroutine writeVTKfractures(filename, points, fracture_size, nfracs)
+        !input
+        character(len=*), intent(in) :: filename
+        integer :: nfracs
+        real(kind=CUSTOM_REAL), dimension(:,:), intent(in) :: points
+        integer, dimension(:,:), intent(in) :: fracture_size
+        !local
+        integer :: i, j, n
+        character(len = 50) :: myfmt
+
+        n = size(points(:,1))
+
+        open(19,file=trim(filename),status='unknown')
+        write(19,'(a)') '# vtk DataFile Version 3.1'
+        write(19,'(a)') 'Line representation of the fracture'
+        write(19,'(a)') 'ASCII'
+        write(19,'(a)') 'DATASET POLYDATA'
+        write(19,'(a,i12,a)') 'POINTS ', n, ' float'
+        do i = 1, n
+            write(19, '(3e18.6)') points(i,1),0.,points(i,2)
+        enddo
+        write(19, *) ""
+
+        write(19,'(a, 2i12)') 'LINES ', nfracs, n+nfracs
+
+        do i = 1, nfracs
+            write(19, '(i12)', advance='no') fracture_size(i, 3)
+            write(myfmt, '("(",I0,"(I12))")') fracture_size(i, 3)
+            write(19, myfmt) (j-1, j=fracture_size(i,1), fracture_size(i,2))
+        enddo
+        write(19,*) ""
+        close(19)
+    end subroutine
+
+
 end module vtkMod
