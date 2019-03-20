@@ -687,9 +687,7 @@ module timeloopMod
                                 stf_val_diff=(1.+rk_time)*plotDiffstf(it,2,i)-rk_time*plotDiffstf(it-1,2,i)
                             endif
                         end if
-                    enddo
 
-                    do i=1,src%nsrc
                         if (src%srctype(i)==0) then
                             srcArray(:,1,i)=srcInt(:,i)*(-sin((src%srcangle_force(i)*PI)/180.)*stf_val)/mesh%rho(src%srcelem(i))
                             srcArray(:,2,i)=srcInt(:,i)*(+cos((src%srcangle_force(i)*PI)/180.)*stf_val)/mesh%rho(src%srcelem(i))
