@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -36,7 +36,7 @@ module logoMod
         write(*,*) ':::::   Andre Lamert                                   :::::'
         write(*,*) ':::::   Thomas Möller                                  :::::'
         write(*,*) ':::::   Marc S. Boxberg                                :::::'
-        write(*,*) ':::::   Ruhr-Universität Bochum 2011 - 2018            :::::'
+        write(*,*) ':::::   Ruhr-Universität Bochum 2011 - 2019            :::::'
         write(*,*) ':::::                                                  :::::'
         write(*,*) '::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'
         write(*,*) '::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'

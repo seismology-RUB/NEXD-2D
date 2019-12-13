@@ -1,0 +1,64 @@
+README for the Matlab script 'calc_vel.m'
+Date: 07. June 2017; Author: Janis Heuel, Marc S. Boxberg, Ruhr-Universitaet Bochum, Germany
+
+The Matlab script 'calc_vel.m' calculates wavespeeds and inverse quality factors of elastic and poroelastic materials.
+This script is written in MATLAB R2014b.
+Start the script by writing 'calc_vel' in the Matlab command window.
+The whole script needs the following scripts:
+
+calc_vel.m
+plotting_output.m
+porousmaterial.m
+printing_output.m
+proof_source.m
+reading_parfile.m
+reading_sources.m
+read_input.m
+
+These script should be in a folder with the name 'tools'.
+The calcuation needs the following files (the filename is given with the relative path from tools):
+
+../data/source
+../data/parfile
+../cubit/matpropporo
+
+The parameters with the index 1 describe the wetting fluid and the parameters with index 2 the non wetting fluid.
+
+Some parameters can be set in file 'calc_vel.m' and 'plotting_output.m':
+'calc_vel.m' (line 12-20):
+%%###############################
+%% CONVENIENCE PARAMETERS
+plot_diag      			= true; 		% if plot_diag = true, the plots are displayed
+save_plot   			= true;			% if saves_plot = true, the plot is saved in available formattypes in matlab
+formattype 			= '-dpng'
+attenuation_default 		= true;			% if attenuation_default = true, the invers quality factor is calculated
+logfile 			= true;			% Set true if logfile should be created, otherwise false
+k_default      			= 40;			% Length of all vectors
+wavelet_amplitude   		= 0.001;		% minimal value of amplitude of fourier transformation of the wavelet,
+							% used for frequency estimation. E.g. wavelet_amplitude = 0.001, then 0.1 % of the
+%%###############################			% highest amplitude for the highest frequency
+
+Here, it is possible to choose if the plots should be displayed, the attenuation should be calculated or a logfile of the printed output on the
+commend window should be saved in the folder 'out'. This folder is created by the script.
+If plot_diag = false, then k_default is set automatically to 2. The time, how long the calculation needs, depends on k_default. If k_default has
+a great value, then the calculation needs more time if the viscosity of the fluids is not zero. For low values, the plots are inexact.
+The value wavelet_amplitude controls the frequency range, because a fourier transformation is done for green-, ricker- and external-wavelet to
+estimate the frequencies. The value is multiplied with the highest amplitude of the FFT. The result is an amplitude, where the highest
+frequency is determined of the wavelet.
+
+
+'plotting_output' (line 4-14):
+%##########################################################
+% YOU CAN CHANGE FOR OTHER AXIS LABELS AND UNITS THE FOLLOWING LINES
+xlabel_unit = Frequency;          % unit of x-axis
+xaxis_label = 'Frequency f [Hz]'; % label of x-axis
+
+%xlabel_unit = omega;
+%xaxis_label = 'Angular frequency \omega [rad/s]';
+
+y_axis_label_wavespeed = 'Wavespeed [m/s]';
+y_axis_label_Q	       = 'Q^{-1}';
+%##########################################################
+
+Here, it is possible to change the unit of the x-axis. Both the frequency [Hz] as the angular frequency [rad/s] can be chosen. Furthermore, it is
+possible to change the labels of the y-axes by setting other strings for y_axis_label_wavespeed and y_axis_label_Q.

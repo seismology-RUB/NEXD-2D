@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !

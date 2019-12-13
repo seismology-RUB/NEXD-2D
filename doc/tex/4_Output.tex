@@ -15,7 +15,7 @@
    			\centering
     		\caption{List of vtk-files given as output.}
     		\label{tab:vtk_files}
-    		\begin{tabular}{@{} l p{5cm} @{}}
+    		\begin{tabular}{@{} l p{9cm} @{}}
         		\toprule
         		\multicolumn{1}{c}{Name} & Content\\ 
         		\midrule
@@ -23,8 +23,10 @@
         		rec.vtk & receiver positions \\    
        			src.vtk & source positions \\
         		rho\_model.vtk & density model \\
-        		vp\_model.vtk & p-wave velocity model \\
-        		vs\_model.vtk & s-wave velocity model \\
+        		vp\_model.vtk & p-wave velocity model (if not a poroelastic simulation) \\
+        		vs\_model.vtk & s-wave velocity model (if not a poroelastic simulation) \\
+        		vmax\_model.vtk & maximum wave velocity model (if poroelastic simulation) \\
+        		vmin\_model.vtk & minimum wave velocity model (if poroelastic simulation) \\
         		\bottomrule
     		\end{tabular}
 		\end{table}
@@ -38,7 +40,7 @@
 			\begin{center}%[4cm]{4cm}% 1em left, 2em right
 				\emph{seismo.(component).(number of the station).sd(type)}
 			\end{center}
-			The component is either "x" or "z". If the parameter div and/or curl are enabled this may also be "r" or "t" respectively, where "r" is the radial and "t" the tangential component. The number of the station is a seven-digit running number starting from 0000001 the the total number of stations (cf., nrec in sec.~\ref{subsec:stations}) placed in the model. The file extension .sd* tells the user which kind of data is contained in the file: "a" for acceleration, "v" for particle velocity and "u" for displacement.\\
+			The component is "x", "z" or "p" if it is pressure data. If the parameter div and/or curl are enabled this may also be "r" or "t" respectively, where "r" is the radial and "t" the tangential component. The number of the station is a seven-digit running number starting from 0000001 the the total number of stations (cf., nrec in sec.~\ref{subsec:stations}) placed in the model. The file extension .sd* tells the user which kind of data is contained in the file: "a" for acceleration, "v" for (solid) particle velocity, "v1" and "v2" for fluid particle velocity, "p1" and "p2" for fluid pressure, and "u" for displacement.\\
 			
 			\fcolorbox{green}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Example}: Given these conventions, a seismogram for the x-component of station 23 containing displacement data is named: \emph{seismo.x.0000023.sdu}.}}
 			
@@ -52,7 +54,7 @@
 			\begin{center}%[3cm]{3cm}% 1em left, 2em right
 				\emph{moviedata.(type)(component).(number of the processor)\_it(time-step).bin}
 			\end{center} 
-			Here, type is again "a", "v" or "u", the component is "x", "z" or "norm". In case of the norm, type and component are reversed. The number of processor is a six-digit number of the processor that created the file and time-step is a seven-digit number that describes the time-step that the file represents. \\
+			Here, type is "a", "v", "v1", "v2", "u", "p1", "p2", or "stress", the component is "x", "z" or "norm". In case of the norm, type and component are reversed. The number of processor is a six-digit number of the processor that created the file and time-step is a seven-digit number that describes the time-step that the file represents. \\
 
 			\fcolorbox{green}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Example}: Given these conventions, a movie-binary file for the x-component of the particle velocity created in processor 23 at time-step 4000 is named: \emph{moviedata\_vx\_000023\_it0004000.bin}. If case of the norm, but otherwise identical parameters the file is named: \emph{moviedata\_normV\_000023\_it0004000.bin}.}}
 			

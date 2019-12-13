@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -48,6 +48,7 @@ module meshMod
         sequence
         logical :: has_src = .false.
         logical :: has_rec = .false.
+        logical :: poroelastic !poro
 
         integer :: nglob
         integer :: nelem
@@ -61,6 +62,7 @@ module meshMod
         integer :: nproc                        !Number of Processors
         integer :: nelx
         integer :: nelz
+        integer :: nfluids !poro
 
         integer, dimension(3*NGLL) :: fmaskv
         integer, dimension(NGLL,3) :: fmask
@@ -126,8 +128,13 @@ module meshMod
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: nz => null()
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: sj => null()
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: fscale => null()
-
-
+        real(kind=CUSTOM_REAL), dimension(:,:,:), pointer :: A => null() !poro
+        real(kind=CUSTOM_REAL), dimension(:,:,:), pointer :: B => null() !poro
+        real(kind=CUSTOM_REAL), dimension(:,:,:), pointer :: E => null() !poro
+        real(kind=CUSTOM_REAL), dimension(:,:,:), pointer :: AP => null() !poro
+        real(kind=CUSTOM_REAL), dimension(:,:,:), pointer :: AM => null() !poro
+        real(kind=CUSTOM_REAL), dimension(:,:,:), pointer :: BP => null() !poro
+        real(kind=CUSTOM_REAL), dimension(:,:,:), pointer :: BM => null() !poro
     end type meshVar
 
     contains
@@ -143,6 +150,7 @@ module meshMod
         type(materialIndizes) :: matInd
         type(meshVar), dimension(:), allocatable :: db
         type(materialVar), dimension(:), allocatable :: mat
+        type(porous_material), dimension(:), allocatable :: poromat
         type(meshVar), intent(out) :: this
 
 
@@ -216,6 +224,7 @@ module meshMod
         integer, dimension(:), pointer :: locrecnum => null()
         integer, dimension(:,:), allocatable :: recnum
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: locrecxz => null()
+        real(kind=CUSTOM_REAL), dimension(:), pointer :: locrec_ang => null()
 
         !external model EXPERIMENTAL
         integer :: em_nx, em_nz
@@ -236,12 +245,16 @@ module meshMod
 
         integer, dimension(:,:), allocatable :: lsi_matrix
 
+        character(len=140) :: message
+
+        this%poroelastic = par%poroelastic
 
         call addTrace(errmsg,myname)
 
         ! if we use MPI we will create databases
         if (par%nproc > 1) then
            allocate(db(par%nproc))
+           db%poroelastic = this%poroelastic
         end if
 
         if (par%log) write(*,'(a80)') "|                              use external mesh                               |"
@@ -306,7 +319,7 @@ module meshMod
             write(*,'(a80)') "|------------------------------------------------------------------------------|"
         end if
         ! allocate arrays
-        call allocateMeshArrays(this)
+        call allocateMeshArrays(this,par)
         allocate(neighbortemp(3,this%nelem))
         allocate(sDT(this%nelem),fdt(this%nelem))
 
@@ -319,15 +332,20 @@ module meshMod
         this%neighbor(1,:) = neighbortemp(3,:)
         this%neighbor(2,:) = neighbortemp(1,:)
         this%neighbor(3,:) = neighbortemp(2,:)
-
+        
+        deallocate(neighbortemp)
+        
         ! materials values
-        call setupMaterials(par, mat, matInd, this%nelem, iregion, errmsg)
+        if (par%poroelastic) then
+            call setupMaterials(par, poromat, matInd, this%nelem, errmsg)
+        else
+            call setupMaterials(par, mat, matInd, this%nelem, iregion, errmsg)
+        endif
         !Add some values to the mesh-type that have been read in at other places.
         this%nmat = par%matn
         this%mat = matInd%type
 
         ! free_nodes file
-
         if (par%log) write(*,'(a80)') "|                             read freenodes file                              |"
         filename=trim('cubit/free')
         open(unit=19,file=trim(filename), status='old', iostat = ios)
@@ -490,7 +508,7 @@ module meshMod
                 ! write src to vtk
                 write(filename,"('out/test.vtk')")
                 !    filename=trim(outpath)//trim(filename)
-                call writeVtkNodesRealData(filename, this%vx(iv),tempvr,this%vz(iv),real(ivn, CUSTOM_REAL))
+                call writeVtkNodesRealData(filename, this%vx(iv),tempvr,this%vz(iv),real(ivn, CUSTOM_REAL), 'test')
                 deallocate(tempvr)
             end do
         endif
@@ -578,6 +596,9 @@ module meshMod
             end do
         end do
 
+        deallocate(absorb_nodes)
+        deallocate(free_nodes)
+
         !"--------------------------------------------------------------------------------------"
         ! create boundray nodes association for single mesh
         !"--------------------------------------------------------------------------------------"
@@ -609,6 +630,7 @@ module meshMod
                 end do
             end do
         end if
+
         !"--------------------------------------------------------------------------------------"
         ! create materials
         !"--------------------------------------------------------------------------------------"
@@ -640,39 +662,60 @@ module meshMod
                 this%lambda(i) = this%vp(i)**2 * this%rho(i)-2*this%mu(i)
             end do
         else
+            this%nfluids = par%fluidn
             do i = 1, this%nelem
-                this%rho(i) = mat(this%mat(i))%rho
-                this%vp(i)  = mat(this%mat(i))%vp
-                this%vs(i)  = mat(this%mat(i))%vs
-
-                this%imp_vp(i) = mat(this%mat(i))%imp_vp
-                this%imp_vs(i) = mat(this%mat(i))%imp_vs
-
-                this%qp(i)        = mat(this%mat(i))%qp
-                this%qs(i)        = mat(this%mat(i))%qs
-                this%ylambda(:,i) = mat(this%mat(i))%ylambda(:)
-                this%ymu(:,i)     = mat(this%mat(i))%ymu(:)
-                this%wl(:,i)      = mat(this%mat(i))%omegaL(:)
-                this%pml(i)       = matInd%pml(i)
-                if (mat(this%mat(i))%vs .gt. 0) then
-                    this%mu(i) = mat(this%mat(i))%mu
+                if (this%poroelastic) then
+                    this%A(:,:,i) = poromat(this%mat(i))%A
+                    this%B(:,:,i) = poromat(this%mat(i))%B
+                    this%E(:,:,i) = poromat(this%mat(i))%E
+                    this%AP(:,:,i) = poromat(this%mat(i))%AP
+                    this%AM(:,:,i) = poromat(this%mat(i))%AM
+                    this%BP(:,:,i) = poromat(this%mat(i))%BP
+                    this%BM(:,:,i) = poromat(this%mat(i))%BM
+                    this%vp(i) = poromat(this%mat(i))%vmax !this is the maximum velocity, not vp
+                    this%vs(i) = poromat(this%mat(i))%vmin !this is the minimum velocity, not vs
                 else
-                    ! acustic test
-                    this%mu(i)=0
-                end if
-                this%lambda(i)=mat(this%mat(i))%lambda
+                    this%rho(i) = mat(this%mat(i))%rho
+                    this%vp(i)  = mat(this%mat(i))%vp
+                    this%vs(i)  = mat(this%mat(i))%vs
+
+                    this%imp_vp(i) = mat(this%mat(i))%imp_vp
+                    this%imp_vs(i) = mat(this%mat(i))%imp_vs
+
+                    this%qp(i)        = mat(this%mat(i))%qp
+                    this%qs(i)        = mat(this%mat(i))%qs
+                    this%ylambda(:,i) = mat(this%mat(i))%ylambda(:)
+                    this%ymu(:,i)     = mat(this%mat(i))%ymu(:)
+                    this%wl(:,i)      = mat(this%mat(i))%omegaL(:)
+                    this%pml(i)       = matInd%pml(i)
+                    if (mat(this%mat(i))%vs .gt. 0) then
+                        this%mu(i) = mat(this%mat(i))%mu
+                    else
+                        ! acoustic test
+                        this%mu(i)=0
+                    end if
+                    this%lambda(i)=mat(this%mat(i))%lambda
+                endif
             end do
         end if
 
-        write(filename,"('out/vp_model.vtk')")
-        call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%vp)
-        write(filename,"('out/vs_model.vtk')")
-        call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%vs)
-        write(filename,"('out/rho_model.vtk')")
-        call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%rho)
+        if (this%poroelastic) then
+            write(filename,"('out/vmax_model.vtk')")
+            call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%vp, 'vmax') !this is the maximum velocity, not vp
+            write(filename,"('out/vmin_model.vtk')")
+            call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%vs, 'vmin') !this is the minimum velocity, not vs
+        else
+            write(filename,"('out/vp_model.vtk')")
+            call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%vp, 'vp')
+            write(filename,"('out/vs_model.vtk')")
+            call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%vs, 'vs')
+            write(filename,"('out/rho_model.vtk')")
+            call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,this%rho, 'rho')
+        endif
+
         if (par%set_pml) then
             write(filename,"('out/pml_model.vtk')")
-            call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,real(this%pml, CUSTOM_REAL))
+            call writeVtkTriMeshRealdata2D(filename,this%elem,this%coord,real(this%pml, CUSTOM_REAL), 'pml')
         endif
 
         ! compute dtfactor for every element
@@ -685,7 +728,10 @@ module meshMod
         end do
         this%dtfactor=temp
         if (par%log) write(*,'(a80)') "|------------------------------------------------------------------------------|"
+        if (par%log) write(*,'(a40, es12.5, a28)') "|                                 vmax: ",maxval(this%vp), "                           |"
+        if (par%log) write(*,'(a40, es12.5, a28)') "|                                 vmin: ",minval(this%vs), "                           |"
         if (par%log) write(*,'(a40, es12.5, a28)') "|                             dtfactor: ",this%dtfactor, "                           |"
+        if (par%log) write(*,'(a40, es12.5, a28)') "|                recommended time step: ",this%dtfactor*par%cfl, "                           |"
 
         if (lsipar%lsi) then
             if (par%log) write(*,'(a80)') "|------------------------------------------------------------------------------|"
@@ -699,7 +745,8 @@ module meshMod
         end if
 
         if (.not. par%autodt .and. (par%dt > this%dtfactor*par%cfl)) then
-            call add(errmsg, 1, "The input for dt is larger then the recommended time step for this simulation. This may cause instabilities.", myname)
+            write(message,'(a18, es12.6, a44, es12.6, a52)') "The input for dt (", par%dt,") is larger then the recommended time step (", this%dtfactor*par%cfl,") for this simulation. This may cause instabilities."
+            call add(errmsg, 1, message, myname)
         end if
 
         !"--------------------------------------------------------------------------------------"
@@ -742,6 +789,7 @@ module meshMod
                 k=k+nb_neigh
                 xadj(i+1)=k+1
             end do
+
             ! create metis partition
             allocate(part(this%nelem))
             options(:)=0
@@ -824,7 +872,7 @@ module meshMod
                     end if
                 end do
             end do
-
+            
             !"--------------------------------------------------------------------------------------"
             ! build Databases
             !"--------------------------------------------------------------------------------------"
@@ -872,10 +920,21 @@ module meshMod
                 allocate(db(iproc)%neighbor(3,db(iproc)%nelem))
                 allocate(db(iproc)%mpi_interface(4,3,db(iproc)%nelem))
                 allocate(db(iproc)%face(3,db(iproc)%nelem))
-                allocate(db(iproc)%vp(db(iproc)%nelem),db(iproc)%vs(db(iproc)%nelem),db(iproc)%rho(db(iproc)%nelem),&
-                        db(iproc)%qp(db(iproc)%nelem),db(iproc)%qs(db(iproc)%nelem),&
-                        db(iproc)%mu(db(iproc)%nelem),db(iproc)%lambda(db(iproc)%nelem),db(iproc)%pml(db(iproc)%nelem))
-
+                if (this%poroelastic) then
+                    allocate(db(iproc)%A(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                             db(iproc)%B(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                             db(iproc)%E(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                             db(iproc)%AM(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                             db(iproc)%AP(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                             db(iproc)%BM(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                             db(iproc)%BP(5+3*par%fluidn,5+3*par%fluidn,this%nelem))
+                    allocate(db(iproc)%vp(this%nelem),db(iproc)%vs(db(iproc)%nelem))
+                else
+                    allocate(db(iproc)%vp(db(iproc)%nelem),db(iproc)%vs(db(iproc)%nelem),db(iproc)%rho(db(iproc)%nelem),&
+                             db(iproc)%qp(db(iproc)%nelem),db(iproc)%qs(db(iproc)%nelem),&
+                             db(iproc)%mu(db(iproc)%nelem),db(iproc)%lambda(db(iproc)%nelem))
+                endif
+                allocate(db(iproc)%pml(db(iproc)%nelem))
                 allocate(db(iproc)%ylambda(nMB,db(iproc)%nelem),db(iproc)%ymu(nMB,db(iproc)%nelem),db(iproc)%wl(nMB,db(iproc)%nelem))
                 allocate(db(iproc)%ibt(NGLL,3,db(iproc)%nelem),db(iproc)%ibn(NGLL,3,db(iproc)%nelem))
                 allocate(db(iproc)%mpi_ibt(NGLL,3,db(iproc)%nelem))
@@ -997,25 +1056,40 @@ module meshMod
                 do ie=1, this%nelem
                     if (part(ie)== iproc) then
                         l = glob2loc_elmnts(ie)
-                        db(iproc)%face(:,l)    = this%face(:,ie)
-                        db(iproc)%mat(l)       = this%mat(ie)
-                        db(iproc)%vp(l)        = this%vp(ie)
-                        db(iproc)%vs(l)        = this%vs(ie)
-                        db(iproc)%rho(l)       = this%rho(ie)
-                        db(iproc)%qp(l)        = this%qp(ie)
-                        db(iproc)%qs(l)        = this%qs(ie)
+                        db(iproc)%face(:,l)=this%face(:,ie)
+                        db(iproc)%mat(l)=this%mat(ie)
+                        if (this%poroelastic) then
+                            db(iproc)%nfluids      = this%nfluids
+                            db(iproc)%A(:,:,l)     = this%A(:,:,ie)
+                            db(iproc)%B(:,:,l)     = this%B(:,:,ie)
+                            db(iproc)%E(:,:,l)     = this%E(:,:,ie)
+                            db(iproc)%AM(:,:,l)    = this%AM(:,:,ie)
+                            db(iproc)%AP(:,:,l)    = this%AP(:,:,ie)
+                            db(iproc)%BM(:,:,l)    = this%BM(:,:,ie)
+                            db(iproc)%BP(:,:,l)    = this%BP(:,:,ie)
+                            db(iproc)%vp(l)        = this%vp(ie)
+                            db(iproc)%vs(l)        = this%vs(ie)
+                        else
+                            db(iproc)%face(:,l)    = this%face(:,ie)
+                            db(iproc)%mat(l)       = this%mat(ie)
+                            db(iproc)%vp(l)        = this%vp(ie)
+                            db(iproc)%vs(l)        = this%vs(ie)
+                            db(iproc)%rho(l)       = this%rho(ie)
+                            db(iproc)%qp(l)        = this%qp(ie)
+                            db(iproc)%qs(l)        = this%qs(ie)
 
-                        db(iproc)%imp_vp(l)    = this%imp_vp(ie)
-                        db(iproc)%imp_vs(l)    = this%imp_vs(ie)
+                            db(iproc)%imp_vp(l)    = this%imp_vp(ie)
+                            db(iproc)%imp_vs(l)    = this%imp_vs(ie)
 
-                        db(iproc)%ylambda(:,l) = this%ylambda(:,ie)
-                        db(iproc)%ymu(:,l)     = this%ymu(:,ie)
-                        db(iproc)%wl(:,l)      = this%wl(:,ie)
-                        db(iproc)%lambda(l)    = this%lambda(ie)
-                        db(iproc)%mu(l)        = this%mu(ie)
+                            db(iproc)%ylambda(:,l) = this%ylambda(:,ie)
+                            db(iproc)%ymu(:,l)     = this%ymu(:,ie)
+                            db(iproc)%wl(:,l)      = this%wl(:,ie)
+                            db(iproc)%lambda(l)    = this%lambda(ie)
+                            db(iproc)%mu(l)        = this%mu(ie)
+
+                            db(iproc)%elemNo(l)    = this%elemNo(ie)
+                        endif
                         db(iproc)%pml(l)       = this%pml(ie)
-
-                        db(iproc)%elemNo(l)    = this%elemNo(ie)
                     end if
                 end do
             end do !iproc
@@ -1168,10 +1242,10 @@ module meshMod
                 end do
             end do
 
-            !test plot of mesh silces
+            !test plot of mesh slices
             if(par%debug) then
                 do iproc=1,par%nproc
-                    db(iproc)%nproc=par%nproc
+                    db(iproc)%nproc = par%nproc
                     write(filename,"('out/mesh',i6.6,'.ps')") iproc
                     call triangulation_order3_plot ( trim(filename), db(iproc)%ncoord, dble(db(iproc)%coord), &
                                                     db(iproc)%nelem, db(iproc)%elem, 2, 2 )
@@ -1287,7 +1361,7 @@ module meshMod
             deallocate(srcnr)
 
             !"--------------------------------------------------------------------------------------"
-            ! find source in the global mesh
+            ! find receiver in the global mesh
             !"--------------------------------------------------------------------------------------"
             call initReceiver(par,rec, this%coord, errmsg)
 
@@ -1318,6 +1392,7 @@ module meshMod
                 if (db(iproc)%has_rec) then
                     ! recreate rec arrays
                     allocate(locrecxz(2,tempv(iproc)))
+                    allocate(locrec_ang(tempv(iproc)))
                     allocate(locrecnr(tempv(iproc)))
                     allocate(locrecnum(tempv(iproc)))
                     locnrec=tempv(iproc)
@@ -1325,9 +1400,10 @@ module meshMod
                         locrecnum(i) = recnum(iproc,i)
                         locrecxz(:,i) = rec%recxz(:,locrecnum(i))
                         locrecnr(i) = rec%recnr(locrecnum(i))
+                        locrec_ang(i) = rec%rec_ang(locrecnum(i))
                         j=j+1
                     end do
-                    call prepareRecalcRec(temprec,locnrec,locrecxz,locrecnr)
+                    call prepareRecalcRec(temprec,locnrec,locrecxz,locrecnr,locrec_ang)
                     if (par%log) write(*,'(a80)') "|------------------------------------------------------------------------------|"
                     if (par%log) write(*,'(a40, i6, a34)') "|          Locate receiver in database: ", iproc, "                                 |"
                     call findReceiver(par,temprec,db(iproc)%vx,db(iproc)%vz,db(iproc)%nelem,db(iproc)%ibool,&
@@ -1337,6 +1413,7 @@ module meshMod
                     call writeRecVar(temprec,filename)
                     deallocate(locrecnum)
                     deallocate(locrecxz)
+                    deallocate(locrec_ang)
                     deallocate(locrecnr)
                     call deallocRecVar(temprec)
                 end if
@@ -1366,7 +1443,7 @@ module meshMod
             end do !nproc create databases
             if (par%log) write(*,'(a80)') "|                        done writing database files                           |"
             if (par%log) write(*,'(a80)') "|------------------------------------------------------------------------------|"
-        end if ! nproc >1
+        end if ! par%nproc >1
 
         !LSI only
         if (lsipar%lsi) then
@@ -1432,6 +1509,13 @@ module meshMod
         if (associated(this%elem)) deallocate(this%elem)
         if (associated(this%neighbor)) deallocate(this%neighbor)
         if (associated(this%face)) deallocate(this%face)
+        if (associated(this%A)) deallocate(this%A)
+        if (associated(this%B)) deallocate(this%B)
+        if (associated(this%E)) deallocate(this%E)
+        if (associated(this%AP)) deallocate(this%AP)
+        if (associated(this%AM)) deallocate(this%AM)
+        if (associated(this%BP)) deallocate(this%BP)
+        if (associated(this%BM)) deallocate(this%BM)
         if (associated(this%vp)) deallocate(this%vp)
         if (associated(this%vs)) deallocate(this%vs)
         if (associated(this%rho)) deallocate(this%rho)
@@ -1456,8 +1540,9 @@ module meshMod
         if (allocated(this%imp_vs)) deallocate(this%imp_vs)
     end subroutine deallocMeshvar
 
-    subroutine allocateMeshArrays(this)
+    subroutine allocateMeshArrays(this,par)
         type(meshVar) :: this
+        type(parameterVar) :: par
         !"--------------------------------------------------------------------------------------"
         allocate(this%vx(this%nglob),this%vz(this%nglob))
         allocate(this%rx(this%nglob), this%rz(this%nglob), this%sx(this%nglob), this%sz(this%nglob))
@@ -1468,12 +1553,23 @@ module meshMod
         allocate(this%neighbor(3,this%nelem))
         allocate(this%face(3,this%nelem))
         allocate(this%ibt(NGLL,3,this%nelem),this%ibn(NGLL,3,this%nelem))
-        allocate(this%vp(this%nelem),this%vs(this%nelem),this%rho(this%nelem),this%qp(this%nelem),this%qs(this%nelem),this%mu(this%nelem),this%lambda(this%nelem),this%pml(this%nelem))
+        if (this%poroelastic) then
+            allocate(this%A(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                     this%B(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                     this%E(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                     this%AM(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                     this%AP(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                     this%BM(5+3*par%fluidn,5+3*par%fluidn,this%nelem),&
+                     this%BP(5+3*par%fluidn,5+3*par%fluidn,this%nelem))
+            allocate(this%vp(this%nelem),this%vs(this%nelem))
+        else
+            allocate(this%vp(this%nelem),this%vs(this%nelem),this%rho(this%nelem),this%qp(this%nelem),this%qs(this%nelem),this%mu(this%nelem),this%lambda(this%nelem))
+        endif
+        allocate(this%pml(this%nelem))
         allocate(this%ylambda(nMB,this%nelem),this%ymu(nMB,this%nelem), this%wl(nMB,this%nelem))
         allocate(this%imp_vp(this%nelem), this%imp_vs(this%nelem))
     end subroutine allocateMeshArrays
 
-    !"--------------------------------------------------------------------------------------"
     ! write meshVar to file
     !
     subroutine writeMeshVar(this,filename)
@@ -1491,6 +1587,7 @@ module meshMod
         logical :: has_rec
         real(kind=CUSTOM_REAL) :: dtfactor
         integer :: nelx,nelz
+        integer :: nfluids
 
         real(kind=CUSTOM_REAL), dimension(Np,Np) :: invVdm,Vdm,Dr,Ds
         real(kind=CUSTOM_REAL), dimension(Np,Np) :: Drw,Dsw,Vdmr,Vdms
@@ -1510,6 +1607,8 @@ module meshMod
         integer, allocatable, dimension(:,:) :: neighbor
         integer, allocatable, dimension(:,:) :: face
         real(kind=CUSTOM_REAL), allocatable, dimension(:) :: vp,vs,rho,mu,lambda,qp,qs
+        logical :: poroelastic
+        real(kind=CUSTOM_REAL), allocatable, dimension(:,:,:) :: A,B,E,AP,AM,BP,BM
         real(kind=CUSTOM_REAL), allocatable, dimension(:,:) :: ymu,ylambda,wl
         integer, dimension(:), allocatable :: pml
         real(kind=CUSTOM_REAL), allocatable, dimension(:,:) :: nx,nz,sj,fscale
@@ -1564,7 +1663,19 @@ module meshMod
         allocate(elem(3,nelem))
         allocate(neighbor(3,nelem))
         allocate(face(3,nelem))
-        allocate(vp(nelem),vs(nelem),rho(nelem),qp(nelem),qs(nelem),mu(nelem),lambda(nelem),pml(nelem))
+        if (this%poroelastic) then
+            allocate(A(size(this%A(:,1,1)),size(this%A(1,:,1)),nelem),&
+                     B(size(this%B(:,1,1)),size(this%B(1,:,1)),nelem),&
+                     E(size(this%E(:,1,1)),size(this%E(1,:,1)),nelem),&
+                     AM(size(this%AM(:,1,1)),size(this%AM(1,:,1)),nelem),&
+                     AP(size(this%AP(:,1,1)),size(this%AP(1,:,1)),nelem),&
+                     BM(size(this%BM(:,1,1)),size(this%BM(1,:,1)),nelem),&
+                     BP(size(this%BP(:,1,1)),size(this%BP(1,:,1)),nelem))
+            allocate(vp(nelem),vs(nelem))
+        else
+            allocate(vp(nelem),vs(nelem),rho(nelem),qp(nelem),qs(nelem),mu(nelem),lambda(nelem))
+        endif
+        allocate(pml(nelem))
         allocate(ymu(nMB,nelem),ylambda(nMB,nelem),wl(nMB,nelem))
         allocate(loc2glob_nodes(ncoord))
         allocate(ibt(NGLL,3,nelem),ibn(NGLL,3,nelem))
@@ -1594,13 +1705,27 @@ module meshMod
         elem = this%elem
         neighbor = this%neighbor
         face = this%face
-        vp = this%vp
-        vs = this%vs
-        rho = this%rho
-        qp = this%qp
-        qs = this%qs
-        mu = this%mu
-        lambda = this%lambda
+        poroelastic = this%poroelastic
+        if (this%poroelastic) then
+            nfluids = this%nfluids
+            A = this%A
+            B = this%B
+            E = this%E
+            AM = this%AM
+            AP = this%AP
+            BM = this%BM
+            BP = this%BP
+            vp = this%vp
+            vs = this%vs
+        else
+            vp = this%vp
+            vs = this%vs
+            rho = this%rho
+            qp = this%qp
+            qs = this%qs
+            mu = this%mu
+            lambda = this%lambda
+        endif
         ymu = this%ymu
         ylambda = this%ylambda
         wl = this%wl
@@ -1666,13 +1791,27 @@ module meshMod
         write(27) elem
         write(27) neighbor
         write(27) face
-        write(27) vp
-        write(27) vs
-        write(27) rho
-        write(27) qp
-        write(27) qs
-        write(27) mu
-        write(27) lambda
+        write(27) poroelastic
+        if (this%poroelastic) then
+            write(27) nfluids
+            write(27) A
+            write(27) B
+            write(27) E
+            write(27) AM
+            write(27) AP
+            write(27) BM
+            write(27) BP
+            write(27) vp
+            write(27) vs
+        else
+            write(27) vp
+            write(27) vs
+            write(27) rho
+            write(27) qp
+            write(27) qs
+            write(27) mu
+            write(27) lambda
+        endif
         write(27) ymu
         write(27) ylambda
         write(27) wl
@@ -1713,7 +1852,12 @@ module meshMod
         deallocate(elem)
         deallocate(neighbor)
         deallocate(face)
-        deallocate(vp,vs,rho,qp,qs,mu,lambda,pml,ymu,ylambda,wl)
+        if (this%poroelastic) then
+            deallocate(A,B,E,AM,AP,BM,BP,vp,vs)
+        else
+            deallocate(vp,vs,rho,qp,qs,mu,lambda)
+        endif
+        deallocate(pml,ymu,ylambda,wl)
         deallocate(ibt,ibn)
         deallocate(loc2glob_nodes)
         deallocate(mpi_interface)
@@ -1820,13 +1964,35 @@ module meshMod
         read(27) this%elem
         read(27) this%neighbor
         read(27) this%face
-        read(27) this%vp
-        read(27) this%vs
-        read(27) this%rho
-        read(27) this%qp
-        read(27) this%qs
-        read(27) this%mu
-        read(27) this%lambda
+        read(27) this%poroelastic
+        if (this%poroelastic) then
+            read(27) this%nfluids
+            allocate(this%A(5+3*this%nfluids,5+3*this%nfluids,this%nelem),&
+                     this%B(5+3*this%nfluids,5+3*this%nfluids,this%nelem),&
+                     this%E(5+3*this%nfluids,5+3*this%nfluids,this%nelem),&
+                     this%AM(5+3*this%nfluids,5+3*this%nfluids,this%nelem),&
+                     this%AP(5+3*this%nfluids,5+3*this%nfluids,this%nelem),&
+                     this%BM(5+3*this%nfluids,5+3*this%nfluids,this%nelem),&
+                     this%BP(5+3*this%nfluids,5+3*this%nfluids,this%nelem))
+            read(27) this%A
+            read(27) this%B
+            read(27) this%E
+            read(27) this%AM
+            read(27) this%AP
+            read(27) this%BM
+            read(27) this%BP
+            read(27) this%vp
+            read(27) this%vs
+        else
+            allocate(this%rho(this%nelem),this%qp(this%nelem),this%qs(this%nelem),this%mu(this%nelem),this%lambda(this%nelem))
+            read(27) this%vp
+            read(27) this%vs
+            read(27) this%rho
+            read(27) this%qp
+            read(27) this%qs
+            read(27) this%mu
+            read(27) this%lambda
+        endif
         read(27) this%ymu
         read(27) this%ylambda
         read(27) this%wl

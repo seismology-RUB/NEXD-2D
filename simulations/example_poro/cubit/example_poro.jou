@@ -1,0 +1,42 @@
+reset
+
+###################################
+#model
+
+create surface rectangle width 100 height 100 zplane
+move surface all x 50 y 50 z 0 include_merged
+
+###################################
+#meshing
+
+merge all
+surf all size 2.5
+surface all scheme TriDelaunay
+mesh surface all
+
+###################################
+# materials
+set duplicate block elements on
+
+block 1 tri in surf 1
+
+# (visco-)elastic: elastic nr vp vs rho qp qs
+# poroelastic:     poro nr 1 rhos lambda^u my phi kappa b 1/T 1/N rho1 S1 K1 ny1 rho2 S2 K2 ny2 fitting_n fitting_chi Sr1 Sr2
+#               OR poro nr 2 rhos lambda^u my phi kappa b 1/T 1/N rho1 S1 K1 ny1 rho2 S2 K2 ny2 p_b       lambda_BC   Sr1 Sr2
+#               OR poro nr 3 rhos K^d      my phi kappa 0 1/T Ks  rho1 S1 K1 ny1 rho2 S2 K2 ny2 fitting_n fitting_chi Sr1 Sr2
+#               OR poro nr 4 rhos K^d      my phi kappa 0 1/T Ks  rho1 S1 K1 ny1 rho2 S2 K2 ny2 p_b       lambda_BC   Sr1 Sr2
+#               OR poro nr 5 rhos K^d      my phi kappa 0 1/T 1/N rho1 S1 K1 ny1 rho2 S2 K2 ny2 fitting_n fitting_chi Sr1 Sr2
+#               OR poro nr 6 rhos K^d      my phi kappa 0 1/T 1/N rho1 S1 K1 ny1 rho2 S2 K2 ny2 p_b       lambda_BC   Sr1 Sr2
+#               OR poro nr 7 rhos lambda^u my phi kappa b 1/T 1/N rho1 S1 K1 ny1 rho2 S2 K2 ny2 A         0           Sr1 Sr2
+#               OR poro nr 8 rhos K^d      my phi kappa 0 1/T Ks  rho1 S1 K1 ny1 rho2 S2 K2 ny2 A         0           Sr1 Sr2
+#               OR poro nr 9 rhos K^d      my phi kappa 0 1/T 1/N rho1 S1 K1 ny1 rho2 S2 K2 ny2 A         0           Sr1 Sr2
+
+block 1 name "poro 1 1 3000 13.56e9 30.720e9 0.3 1.0e-17 0.7 0.74 1.33e-7 0.099 0.5 20.8e5 0.0 0.055 0.5 4.0e1 0.0 2.86 0.79 0.00 0.00"
+
+
+#edges
+nodeset 1 node in curve 1 2 3 4
+
+nodeset 1 name "absorb"
+
+save as "testtri.cub" overwrite

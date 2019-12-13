@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -25,6 +25,11 @@ module waveMod
     use mpiMod
 
     implicit none
+
+    interface computeExactRiemannSF
+        module procedure computeExactRiemannSFElastic
+        module procedure computeExactRiemannSFPoroelastic
+    end interface computeExactRiemannSF
 
     contains
 
@@ -50,6 +55,20 @@ module waveMod
         g(:,4)= elasticfluxvar(4)*q(:,3)
         g(:,5)= elasticfluxvar(4)*q(:,2)
     end subroutine elasticFluxes
+
+    subroutine poroelasticFluxes(q,A,B,E,f,g,h)
+        ! compute poroelastic fluxes
+        real(kind=CUSTOM_REAL), dimension(:,:) :: A,B,E
+        real(kind=CUSTOM_REAL), dimension(:,:) :: f,g,h
+        real(kind=CUSTOM_REAL), dimension(:,:) :: q
+        integer :: i
+        
+        do i=1,size(q(:,1))
+            f(i,:) = matmul(A,q(i,:))
+            g(i,:) = matmul(B,q(i,:))
+            h(i,:) = matmul(E,q(i,:))
+        enddo
+    end subroutine poroelasticFluxes
 
     subroutine anelasticFluxes(q,wl,f,g)
         ! compute anelastic fluxes
@@ -103,30 +122,50 @@ module waveMod
         getAnelasticAPA(3,5) = -1.0/2.0
     end function getAnelasticAPA
 
-    function getT(nxe,nze)
+    function getT(nxe,nze,dimens)
         !get rotation matrix
-        real(kind=CUSTOM_REAL) :: nxe,nze
-        real(kind=CUSTOM_REAL), dimension(5,5) :: getT
+        real(kind=CUSTOM_REAL), intent(in) :: nxe,nze
+        integer, intent(in) :: dimens
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: getT
+        
+        allocate(getT(dimens,dimens))
         getT=0.0
-        getT(1,1) = nxe*nxe
-        getT(1,2) = nze*nze
-        getT(1,3) = -2*nxe*nze
-        getT(2,1) = nze*nze
-        getT(2,2) = nxe*nxe
-        getT(2,3) = 2*nxe*nze
-        getT(3,1) = nxe*nze
-        getT(3,2) = -nxe*nze
-        getT(3,3) = nxe*nxe-nze*nze
-        getT(4,4) = nxe
-        getT(4,5) = -nze
-        getT(5,4) = nze
-        getT(5,5) = nxe
+        getT( 1, 1) = nxe*nxe
+        getT( 1, 2) = nze*nze
+        getT( 1, 3) = -2*nxe*nze
+        getT( 2, 1) = nze*nze
+        getT( 2, 2) = nxe*nxe
+        getT( 2, 3) = 2*nxe*nze
+        getT( 3, 1) = nxe*nze
+        getT( 3, 2) = -nxe*nze
+        getT( 3, 3) = nxe*nxe-nze*nze
+        getT( 4, 4) = nxe
+        getT( 4, 5) = -nze
+        getT( 5, 4) = nze
+        getT( 5, 5) = nxe
+        if (dimens > 5) then
+            getT( 6, 6) = 1!nxe*nxe
+            getT( 7, 7) = nxe
+            getT( 7, 8) = -nze
+            getT( 8, 7) = nze
+            getT( 8, 8) = nxe
+            if (dimens > 8) then
+                getT( 9, 9) = 1!nxe*nxe
+                getT(10,10) = nxe
+                getT(10,11) = -nze
+                getT(11,10) = nze
+                getT(11,11) = nxe
+            endif
+        endif
     end function getT
 
-    function getInvT(nxe,nze)
+    function getInvT(nxe,nze,dimens)
         !get inverse rotation matrix
-        real(kind=CUSTOM_REAL) :: nxe,nze
-        real(kind=CUSTOM_REAL), dimension(5,5) :: getInvT
+        real(kind=CUSTOM_REAL), intent(in) :: nxe,nze
+        integer, intent(in) :: dimens
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: getInvT
+        
+        allocate(getInvT(dimens,dimens))
         getInvT=0.0
         getInvT(1,1) = nxe*nxe
         getInvT(1,2) = nze*nze
@@ -141,9 +180,23 @@ module waveMod
         getInvT(4,5) = nze
         getInvT(5,4) = -nze
         getInvT(5,5) = nxe
+        if (dimens > 5) then
+            getInvT( 6, 6) = 1!nxe*nxe
+            getInvT( 7, 7) = nxe
+            getInvT( 7, 8) = nze
+            getInvT( 8, 7) = -nze
+            getInvT( 8, 8) = nxe
+            if (dimens > 8) then
+                getInvT( 9, 9) = 1!nxe*nxe
+                getInvT(10,10) = nxe
+                getInvT(10,11) = nze
+                getInvT(11,10) = -nze
+                getInvT(11,11) = nxe
+            endif
+        endif
     end function getInvT
 
-   subroutine computeExactRiemannSF(flux,q,qi,neighbor,VT,VTfree,face, mpi_interface,&
+    subroutine computeExactRiemannSFElastic(flux,q,qi,neighbor,VT,VTfree,face, mpi_interface,&
                                      mpi_ibool, mpi_ibt,ibt,ibn,num_eq)
         !Riemann fluxes for the Strong form of DG
         integer, intent(in) :: num_eq
@@ -210,5 +263,103 @@ module waveMod
                 end do
             end if
         end do
-    end subroutine computeExactRiemannSF
+    end subroutine computeExactRiemannSFElastic
+
+    subroutine computeExactRiemannSFPoroelastic(flux,q,qi,neighbor,AP,face, mpi_interface,&
+                                     mpi_ibool, mpi_ibt,ibt,ibn,nx,nz,freex,dimens)
+        !Riemann fluxes for the Strong form of DG
+        integer, dimension(:) :: neighbor,face
+        integer, dimension(:,:) :: ibt,ibn
+        real(kind=CUSTOM_REAL), dimension(:,:) :: freex
+        real(kind=CUSTOM_REAL), dimension(:,:) :: flux
+        real(kind=CUSTOM_REAL), dimension(:) :: nx,nz
+        real(kind=CUSTOM_REAL), dimension(:,:) :: q
+        real(kind=CUSTOM_REAL), dimension(:,:,:,:) :: qi
+        real(kind=CUSTOM_REAL), dimension(:,:), intent(in) :: AP
+        integer, dimension(:,:) :: mpi_interface
+        integer, dimension(:) :: mpi_ibool
+        integer, dimension(:,:) :: mpi_ibt
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: qtemp_n,qtemp_t
+        real(kind=CUSTOM_REAL) :: nxe,nze
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: T,invT,VT
+        !real(kind=CUSTOM_REAL), dimension(5,5) :: APA,AMA,VT,WT
+        integer :: is,in,i,j
+        integer :: mpi_e, mpi_n
+        integer :: dimens
+        ! compute exact riemann problem, elementwise
+        
+        allocate(T(dimens,dimens),invT(dimens,dimens),VT(dimens,dimens))
+        allocate(qtemp_n(NGLL,dimens),qtemp_t(NGLL,dimens))
+        
+        ! for all equal
+        !APA = getAPA(vp,vs,rho,lambda,mu)
+
+        flux=0.0
+        
+        do is=1,3 !surfs
+            nxe=nx(is*NGLL)
+            nze=nz(is*NGLL)
+            T = getT(nxe,nze,dimens)
+            invT = getInvT(nxe,nze,dimens)
+
+            ! get neigbor element
+            in = neighbor(is)
+            if (in>0) then ! not boundary of the whole domain
+                qtemp_t=q(ibt(:,is),:)
+                qtemp_n=q(ibn(:,is),:)
+                
+                VT= matmul(T,matmul(AP,invT))
+
+                do i=1,NGLL
+                    qtemp_t(i,:) = matmul(VT,(qtemp_n(i,:)-qtemp_t(i,:)))
+                end do
+
+                do j=1,dimens
+                    flux(((is-1)*NGLL+1):(is*NGLL),j) = qtemp_t(:,j)
+                end do
+                !boundaries
+                ! "------------------------------------------------------------------"
+            else if ((in==0).and.(face(is) == -1)) then ! free
+                qtemp_t=q(ibt(:,is),:)
+
+                VT= matmul(T,matmul(matmul(AP,freex),invT))
+
+                do i=1,NGLL
+                    qtemp_t(i,:) = matmul(VT,qtemp_t(i,:))
+                end do
+
+                do j=1,dimens
+                    flux(((is-1)*NGLL+1):(is*NGLL),j) = (qtemp_t(:,j))
+                end do
+            else if ((in==0).and.face(is) == -2) then !absorb
+                qtemp_t=q(ibt(:,is),:)
+
+                VT= matmul(T,matmul(AP,invT))
+                do i=1,NGLL
+                    qtemp_t(i,:) = -matmul(VT,qtemp_t(i,:))
+                end do
+
+                do j=1,dimens
+                    flux(((is-1)*NGLL+1):(is*NGLL),j) = qtemp_t(:,j)
+                end do
+            else if (in == -1) then
+                ! mpi interface
+                mpi_e=mpi_ibool(is)
+                mpi_n=mpi_interface(4,is)
+    
+                qtemp_t=q(ibt(:,is),:)
+                do i=1,NGLL
+                    qtemp_n(i,:)=qi(mpi_ibt(i,is),:,mpi_e,mpi_n)
+                end do
+
+                VT= matmul(T,matmul(AP,invT))
+                do i=1,NGLL
+                    qtemp_t(i,:) = matmul(VT,(qtemp_n(i,:)-qtemp_t(i,:)))
+                end do
+                do j=1,dimens
+                    flux(((is-1)*NGLL+1):(is*NGLL),j) = (qtemp_t(:,j))
+                end do
+            end if
+        end do
+    end subroutine computeExactRiemannSFPoroelastic
 end module waveMod

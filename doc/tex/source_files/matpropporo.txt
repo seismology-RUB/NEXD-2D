@@ -1,0 +1,29 @@
+#-------------------------------------------------------------------
+# Defines porous materials:
+#  First line: Number of material types
+#  following lines: values of material parameters, the first number defines which model is used.
+#  (rhos = density solid; lambda^u = first Lameparameter (undrained); K^d = bulk modulus of skeleton (drained); mu = shear modulus; phi = porosity;
+#   kappa = permeability; b = biot coefficient; 1/T = inverse tortuosity (note, that this is replaced by r, if 1/T is calculated!);
+#   1/N = inverse of biot modulus; Ks = bulk modulus of solid grain material;
+#   rho1 = density fluid 1; S1 = saturation fluid 1; K1 = bulk modulus fluid 1; ny1 = viscosity fluid 1; (this is the wetting fluid)
+#   rho2 = density fluid 2; S2 = saturation fluid 2; K2 = bulk modulus fluid 2; ny2 = viscosity fluid 2; (this is the non-wetting fluid)
+#   fitting_n, fitting_chi = fitting parameters for van Genuchten model n, chi; 
+#   p_b = bubbling pressure; lambda_BC = fitting parameter for Brooks & Corey (1964) model);
+#   A = capillary pressure coefficient for Douglas Jr. et al. (1993) model);
+#   Sr1 = residual saturation fluid 1; Sr2 = residual saturation fluid 2:
+# 1, rhos, lambda^u, my, phi, kappa, b,  1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, fitting_n, fitting_chi, Sr1, Sr2
+# 2, rhos, lambda^u, my, phi, kappa, b,  1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, p_b,       lambda_BC,   Sr1, Sr2
+# 3, rhos, K^d,      my, phi, kappa, 0., 1/T, Ks,  rho1, S1, K1, ny1, rho2, S2, K2, ny2, fitting_n, fitting_chi, Sr1, Sr2
+# 4, rhos, K^d,      my, phi, kappa, 0., 1/T, Ks,  rho1, S1, K1, ny1, rho2, S2, K2, ny2, p_b,       lambda_BC,   Sr1, Sr2
+# 5, rhos, K^d,      my, phi, kappa, 0., 1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, fitting_n, fitting_chi, Sr1, Sr2
+# 6, rhos, K^d,      my, phi, kappa, 0., 1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, p_b,       lambda_BC,   Sr1, Sr2
+# 7, rhos, lambda^u, my, phi, kappa, b,  1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, A,         0.,          Sr1, Sr2
+# 8, rhos, K^d,      my, phi, kappa, 0., 1/T, Ks,  rho1, S1, K1, ny1, rho2, S2, K2, ny2, A,         0.,          Sr1, Sr2
+# 9, rhos, K^d,      my, phi, kappa, 0., 1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, A,         0.,          Sr1, Sr2
+#-------------------------------------------------------------------
+BEGIN
+2
+1 3000.0  13.56e9  30.720e9  0.3   1.0e-17   0.7   0.74   1.33e-7   0.099   0.5   20.8e5   0.0      0.055   0.5   4.0e1   0.0      2.86   0.79  0.00  0.00
+1 2350.0   20.0e9   15.0e9   0.3   1.0e-13   0.7   0.74   1.33e-11   990.0   0.5   20.8e9   5.4e-5   550.0   0.5   4.0e5   2.0e-4   2.86   0.79  0.00  0.00
+END
+

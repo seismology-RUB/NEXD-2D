@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -69,7 +69,7 @@ module stfMod
         implicit none
         real(kind=custom_real) :: stfSin3
         real(kind=custom_real) :: f0,t0,factor,t
-        if (t < (1.0/f0)) then
+        if ((0 < t-t0) .and. (t-t0 < (1.0/f0))) then
             stfSin3 = factor * sin(pi*(t-t0)*f0)**3
         else
             stfSin3 = 0.0
@@ -80,7 +80,7 @@ module stfMod
         implicit none
         real(kind=custom_real) :: stfDiffSin3
         real(kind=custom_real) :: f0,t0,factor,t
-        if (t < (1.0/f0)) then
+        if ((0 < t-t0) .and. (t-t0 < (1.0/f0))) then
             stfDiffSin3 = factor * 3 * sin(pi*(t-t0)*f0)**2 * cos(pi*(t-t0)*f0)**2
         else
             stfDiffSin3 = 0.0

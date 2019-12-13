@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !   Copyright 2016 Elena Busch (Rice University, USA)
 !
 !   This file is part of NEXD 2D.
@@ -57,16 +57,18 @@ module timeloopMod
         type(elementToLSI), dimension(:) :: etolsi
         type(lsi_parameter) :: lsipar
         type(movie_parameter) :: movie
-        ! time vatiables
+        ! time variables
         real(kind=CUSTOM_REAL) :: dt
         real(kind=CUSTOM_REAL) :: f0,f0tmp
         real(kind=CUSTOM_REAL), pointer, dimension(:) :: t0
+        real(kind=CUSTOM_REAL) :: t0max, t0maxtmp
         real(kind=CUSTOM_REAL) :: time
+        real(kind=CUSTOM_REAL) :: simt0
         real(kind=CUSTOM_REAL) :: fcrit,avg_energy1,avg_energy2,sta_lta
         integer :: timecrit
         logical :: pmlcrit = .true.
         ! free
-        real(kind=custom_real), dimension(5,5) :: free
+        real(kind=custom_real), dimension(:,:), allocatable :: free
         ! indices
         integer :: i,j,r
         integer :: iglob
@@ -77,11 +79,12 @@ module timeloopMod
         real(kind=custom_real), dimension(:,:), allocatable :: resQ, resU !Runge-Kutta residual for 4th order rk
         ! rec variabels
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: recInt,recTemp
-        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: plotv,plotw,plotux,plotuz,plotax,plotaz, plot_r, plot_t
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: plotv,plotw,plotux,plotuz,plotax,plotaz,plotp1,plotp2,plotv1x,plotv1z,plotv2x,plotv2z,plot_r,plot_t
         real(kind=CUSTOM_REAL), dimension(1) :: r_v,s_v
         real(kind=CUSTOM_REAL) :: ux_temp, uz_temp, vx_temp, vz_temp, ax_temp, az_temp, angle_temp
         real(kind=CUSTOM_REAL), dimension(:), allocatable :: energy,all_energy, energy_kin, energy_pot, np_zeros
         integer, dimension(:), pointer :: recelemv
+        integer :: nsamples, isample
         ! source
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: srcInt,srcTemp
         real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: plotstf
@@ -100,29 +103,35 @@ module timeloopMod
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: fprime, gprime
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: resFprime, resGprime                 !runge Kutte 4th order residual storage
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: fprimen, fprimem, gprimen, gprimem
+
         ! fields
-        real(kind=CUSTOM_REAL), dimension(:), allocatable :: ux,uz,ax,az, uplot, vplot
+        real(kind=CUSTOM_REAL), dimension(:), allocatable :: ux,uz,ax,az, uplot, vplot, v1plot, v2plot
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: rQ,Q,Qn,Qm, rQm,e,u
-        real(kind=CUSTOM_REAL), dimension(Np,5) :: ftemp,gtemp,qtemp
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: ftemp,gtemp,htemp,qtemp
         real(kind=CUSTOM_REAL), dimension(Np) :: dFdr,dFds,dGdr,dGds
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: flux
         real(kind=CUSTOM_REAL), dimension(Np,Np) :: invmass, vdmTinv
-        real(kind=CUSTOM_REAL), dimension(Ngll*3,5) :: flux
-        real(kind=CUSTOM_REAL), dimension(:), allocatable :: stf, anelasticvar
+        real(kind=CUSTOM_REAL), dimension(:), allocatable :: stf
+        real(kind=CUSTOM_REAL), dimension(:), allocatable :: anelasticvar
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: elasticfluxvar
         real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: APA, aAPA
         real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: T, invT, VT, VTfree, aVT, aVTfree, at
+
         !output
         real(kind=CUSTOM_REAL), dimension(:), allocatable :: div
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: curl
+
         !logical :: movie
         logical :: file_exists
         character(len=80) ::filename
+
         ! usefulls
         real(kind=CUSTOM_REAL) :: onehalf = 1./2.
         real(kind=CUSTOM_REAL) :: onethree = 1./3.
         real(kind=CUSTOM_REAL) :: twothree = 2./3.
         real(kind=CUSTOM_REAL) :: onefor = 1./4.
         real(kind=CUSTOM_REAL) :: threefor = 3./4.
+
         ! timer
         type(timestampVar) :: timestamp
         real(kind = custom_real) :: localtime
@@ -141,12 +150,17 @@ module timeloopMod
         integer ,dimension(:), allocatable:: req1
         real(kind=CUSTOM_REAL) :: maxv
         real(kind=CUSTOM_REAL) :: maxu
+
+        ! poroelasticity
+        integer :: dimens
+
         ! attenuation
         real(kind=CUSTOM_REAL), dimension(Np,3*nMB) :: a_ftemp,a_gtemp
         real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: theta,thetam,thetan, resTheta, int_theta
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: a_rQ
         real(kind=CUSTOM_REAL), dimension(Ngll*3,3) :: aflux
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: a_sigma_tmp
+
         !LSI
         integer :: ilsi
         ! error message
@@ -154,9 +168,19 @@ module timeloopMod
 
 
 
+        if (par%autodt) then
+            dt = mesh%dtfactor*par%cfl
+        else
+            dt = par%dt
+        endif
+        if (par%autont) then
+            par%nt = int(par%t_total/dt) + 1
+        endif
+
         call addTrace(errmsg, myname)
 
         if (mesh%has_src) then
+            ! load sources
             write(filename,"('out/srcVar',i6.6)") myrank+1
             inquire(file=trim(filename), exist=file_exists)
             if (file_exists) then
@@ -176,13 +200,6 @@ module timeloopMod
         endif
         ! get the maximum f0
         call maxval_real_all(f0tmp,f0,CUSTOM_REAL)
-        if (par%autoshift) then
-            ! This shifts the seismograms so that t=0 actually is the maximum of the used wavelet (Ricker, Gaussian).
-            par%plott0 = 1.2/f0
-        else
-            ! This is a custom choice for a t0.
-            par%plott0 = 1.2/f0 - par%plott0
-        end if
 
         ! load receivers
         if (mesh%has_rec) then
@@ -205,12 +222,20 @@ module timeloopMod
         if (myrank == 0) write(*,'(a80)') "|------------------------------------------------------------------------------|"
         call sync_mpi()
 
+        !if (par%debug) write(*,*) " Hello from task ",myrank+1, " / ", world_size, "with ", mesh%pinterfaces , " shared interfaces"
         ! allocate fields
-        allocate(ux(mesh%nglob),uz(mesh%nglob),ax(mesh%nglob),az(mesh%nglob),uplot(mesh%nglob),vplot(mesh%nglob))
-        allocate(rQ(mesh%nglob,5),Q(mesh%nglob,5),Qn(mesh%nglob,5),Qm(mesh%nglob,5), rQm(mesh%nglob, 5), resQ(mesh%nglob,5), resU(mesh%nglob, 2), u(mesh%nglob, 2))
+        dimens = 5
+        if (par%poroelastic) then
+            dimens = dimens + 3*mesh%nfluids
+        endif
+        allocate(ux(mesh%nglob),uz(mesh%nglob),ax(mesh%nglob),az(mesh%nglob),uplot(mesh%nglob),vplot(mesh%nglob),v1plot(mesh%nglob),v2plot(mesh%nglob))
+        allocate(rQ(mesh%nglob,dimens),Q(mesh%nglob,dimens),Qn(mesh%nglob,dimens),Qm(mesh%nglob,dimens), rQm(mesh%nglob, dimens), resQ(mesh%nglob,dimens), resU(mesh%nglob, 2), u(mesh%nglob, 2))
+        allocate(ftemp(Np,dimens),gtemp(Np,dimens),htemp(Np,dimens),qtemp(Np,dimens))
         allocate(e(mesh%nglob,3))
         allocate(a_rQ(mesh%nglob,3*nMB),theta(mesh%nglob,3,nMB),thetan(mesh%nglob,3,nMB),thetam(mesh%nglob,3,nMB), resTheta(mesh%nglob,3,nMB))
         allocate(int_theta(mesh%nglob, 3, nMB))
+        allocate(flux(3*NGLL,dimens))
+        !allocate(plotstf(2,par%nt))
         allocate(stf(par%nt))
         allocate(energy(par%nt),energy_kin(par%nt), energy_pot(par%nt))
         allocate(all_energy(par%nt), a_sigma_tmp(Np, 3))
@@ -222,39 +247,56 @@ module timeloopMod
         if (mesh%has_src) then
             allocate(srcInt(Np,src%nsrc),srcTemp(Np,src%nsrc))
             allocate(t0(src%nsrc))
-            allocate(srcArray(Np,2,src%nsrc))
+            if (par%poroelastic) then
+                    allocate(srcArray(Np,2+2*mesh%nfluids,src%nsrc))
+                else
+                    allocate(srcArray(Np,2,src%nsrc))
+                endif
             allocate(srcArrayM(Np,3,src%nsrc))
             allocate(plotstf(par%nt,2,src%nsrc))
             allocate(plotDiffstf(par%nt,2,src%nsrc))
         end if
         if (mesh%has_rec) then
             allocate(recInt(Np,rec%nrec),recTemp(Np,rec%nrec))
-            allocate(plotv(rec%nrec,par%nt),plotw(rec%nrec,par%nt),plotux(rec%nrec,par%nt),plotuz(rec%nrec,par%nt),plotax(rec%nrec,par%nt),plotaz(rec%nrec,par%nt), plot_r(rec%nrec,par%nt), plot_t(rec%nrec,par%nt))
+            nsamples = int(par%nt/par%subsampling_factor)
+            allocate(plotv(rec%nrec,nsamples), plotw(rec%nrec,nsamples))
+            allocate(plotux(rec%nrec,nsamples), plotuz(rec%nrec,nsamples))
+            allocate(plotax(rec%nrec,nsamples), plotaz(rec%nrec,nsamples))
+            allocate(plot_r(rec%nrec,nsamples), plot_t(rec%nrec,nsamples))
+            if (par%poroelastic .and. mesh%nfluids >= 1) then
+                allocate(plotp1(rec%nrec,nsamples))
+                allocate(plotv1x(rec%nrec,nsamples))
+                allocate(plotv1z(rec%nrec,nsamples))
+                if (mesh%nfluids == 2) then
+                    allocate(plotp2(rec%nrec,nsamples))
+                    allocate(plotv2x(rec%nrec,nsamples))
+                    allocate(plotv2z(rec%nrec,nsamples))
+                endif
+            endif
         end if
 
         ! mpi
-        allocate(q_send(NGLL*mesh%mpi_ne*5,mesh%mpi_nn))
-        allocate(q_rec(NGLL*mesh%mpi_ne*5,mesh%mpi_nn))
-        allocate(qi(NGLL,5,mesh%mpi_ne,mesh%mpi_nn))
-        allocate(qi_test(NGLL,5,mesh%mpi_ne,mesh%mpi_nn))
+        allocate(q_send(NGLL*mesh%mpi_ne*dimens,mesh%mpi_nn))
+        allocate(q_rec(NGLL*mesh%mpi_ne*dimens,mesh%mpi_nn))
+        allocate(qi(NGLL,dimens,mesh%mpi_ne,mesh%mpi_nn))
+        allocate(qi_test(NGLL,dimens,mesh%mpi_ne,mesh%mpi_nn))
         allocate(req1(mesh%mpi_nnmax))
-        allocate(rq_send(NGLL*mesh%mpi_ne*5,mesh%mpi_nn))
-        allocate(rq_rec(NGLL*mesh%mpi_ne*5,mesh%mpi_nn))
-        allocate(rqi(NGLL,5,mesh%mpi_ne,mesh%mpi_nn))
+        allocate(rq_send(NGLL*mesh%mpi_ne*dimens,mesh%mpi_nn))
+        allocate(rq_rec(NGLL*mesh%mpi_ne*dimens,mesh%mpi_nn))
+        allocate(rqi(NGLL,dimens,mesh%mpi_ne,mesh%mpi_nn))
         ! pml
         allocate(pmlcheck(mesh%nelem))
         pmlcheck=.false.
 
         if(par%set_pml) then
-            allocate(fprime(mesh%nglob,5))
-            allocate(gprime(mesh%nglob,5))
-            allocate(resFprime(mesh%nglob,5))
-            allocate(resGprime(mesh%nglob,5))
-            allocate(fprimen(mesh%nglob,5),fprimem(mesh%nglob,5))
-            allocate(gprimen(mesh%nglob,5),gprimem(mesh%nglob,5))
+            allocate(fprime(mesh%nglob,dimens))
+            allocate(gprime(mesh%nglob,dimens))
+            allocate(resFprime(mesh%nglob,dimens))
+            allocate(resGprime(mesh%nglob,dimens))
+            allocate(fprimen(mesh%nglob,dimens),fprimem(mesh%nglob,dimens))
+            allocate(gprimen(mesh%nglob,dimens),gprimem(mesh%nglob,dimens))
             allocate(np_zeros(mesh%nglob))
         end if
-
         if (mesh%has_rec) then
             plotux = 0.0
             plotuz = 0.0
@@ -262,6 +304,16 @@ module timeloopMod
             plotw  = 0.0
             plotax = 0.0
             plotaz = 0.0
+            if (par%poroelastic .and. mesh%nfluids >= 1) then
+                plotp1  = 0.0
+                plotv1x = 0.0
+                plotv1z = 0.0
+                if (mesh%nfluids == 2) then
+                    plotp2  = 0.0
+                    plotv2x = 0.0
+                    plotv2z = 0.0
+                endif
+            endif
         end if
 
         q      = 1e-24!eps
@@ -277,30 +329,27 @@ module timeloopMod
             int_theta=1e-24!eps
         endif
 
-        ux    = 0.0
-        uz    = 0.0
-        ax    = 0.0
-        az    = 0.0
-        uplot = 0.0
-        vplot = 0.0
+        ux     = 0.0
+        uz     = 0.0
+        ax     = 0.0
+        az     = 0.0
+        uplot  = 0.0
+        vplot  = 0.0
+        v1plot = 0.0
+        v2plot = 0.0
 
-        if (par%autodt) then
-            dt = mesh%dtfactor*par%cfl
-        else
-            dt = par%dt
+        if (par%use_trigger) then
+            fcrit    = 5/f0
+            timecrit = int(((1.2/f0)*3)/dt)
+            ! sta lta properties for avoiding pml instabilities
+            if (par%log.and.myrank==0) then
+                write(*, '(a80)') "|                           sta-lta trigger properties                         |"
+                write(*,'(a40, i7, a33)')   "|                             timecrit: ",timecrit, "                                |"
+                write(*,'(a40, i7, a33)')   "|                         avg_window1 : ",par%avg_window1, "                                |"
+                write(*,'(a40, i7, a33)')   "|                          avg_window2: ",par%avg_window2, "                                |"
+                write(*,'(a40, f7.2, a33)') "|                      sta_lta_trigger: ",par%sta_lta_trigger, "                                |"
+            end if
         endif
-
-        fcrit    = 5/f0
-        timecrit = int(((1.2/f0)*3)/dt)
-        ! sta lta properties for avoiding pml instabilities
-
-        if (par%log.and.myrank==0) then
-            write(*, '(a80)') "|                           sta-lta trigger properties                         |"
-            write(*,'(a40, i7, a33)')   "|                             timecrit: ",timecrit, "                                |"
-            write(*,'(a40, i7, a33)')   "|                         avg_window1 : ",par%avg_window1, "                                |"
-            write(*,'(a40, i7, a33)')   "|                          avg_window2: ",par%avg_window2, "                                |"
-            write(*,'(a40, f7.2, a33)') "|                      sta_lta_trigger: ",par%sta_lta_trigger, "                                |"
-        end if
 
         nrk = 0
         wrk = 0
@@ -385,12 +434,23 @@ module timeloopMod
         end if
 
         ! free surface conditions
+        allocate(free(dimens,dimens))
         free=0.0
         free(1,1)=-2
         free(2,2)=0
         free(3,3)=-2
         free(4,4)=0
         free(5,5)=0
+        if (par%poroelastic .and. mesh%nfluids >= 1) then
+            free( 6, 6) = -2
+            free( 7, 7) =  0
+            free( 8, 8) =  0
+            if (mesh%nfluids == 2) then
+                free( 9, 9) = -2
+                free(10,10) =  0
+                free(11,11) =  0
+            endif
+        endif
 
         ftemp=0.
         gtemp=0.
@@ -400,9 +460,9 @@ module timeloopMod
         endif
 
         allocate(elasticfluxvar(mesh%nelem,4))
-        allocate(APA(mesh%nelem,5,5))
-        allocate(T(mesh%nelem,3,5,5), invT(mesh%nelem,3,5,5))
-        allocate(VT(mesh%nelem,3,5,5), VTfree(mesh%nelem,3,5,5))
+        allocate(APA(mesh%nelem,dimens,dimens))
+        allocate(T(mesh%nelem,3,dimens,dimens), invT(mesh%nelem,3,dimens,dimens))
+        allocate(VT(mesh%nelem,3,dimens,dimens), VTfree(mesh%nelem,3,dimens,dimens))
         if (par%attenuation) then
             allocate(anelasticvar(mesh%nelem*3*nMB))
             allocate(aVT(mesh%nelem,3,3,5), aVTfree(mesh%nelem,3,3,5),aT(mesh%nelem,3,3,3),aAPA(mesh%nelem,3,5))
@@ -416,8 +476,8 @@ module timeloopMod
             APA(ie,:,:) = getAPA(mesh%vp(ie),mesh%vs(ie),mesh%rho(ie),mesh%lambda(ie),mesh%mu(ie))
             if (par%attenuation) aAPA(ie,:,:) = getAnelasticAPA(mesh%vp(ie),mesh%vs(ie),mesh%rho(ie))
             do is=1,3
-                T(ie,is,:,:) =getT(mesh%nx(is*NGLL,ie),mesh%nz(is*NGLL,ie))
-                invT(ie,is,:,:) =getinvT(mesh%nx(is*NGLL,ie),mesh%nz(is*NGLL,ie))
+                T(ie,is,:,:) =getT(mesh%nx(is*NGLL,ie),mesh%nz(is*NGLL,ie),dimens)
+                invT(ie,is,:,:) =getinvT(mesh%nx(is*NGLL,ie),mesh%nz(is*NGLL,ie),dimens)
                 VT(ie,is,:,:) = matmul(T(ie,is,:,:),matmul(APA(ie,:,:),invT(ie,is,:,:)))
                 VTfree(ie,is,:,:) = matmul(T(ie,is,:,:),matmul(matmul(APA(ie,:,:),free),invT(ie,is,:,:)))
             enddo
@@ -450,24 +510,16 @@ module timeloopMod
         ms = 0.
         if (mesh%has_src) then
             do i=1,src%nsrc
-                if (src%srctype(i) == 0) then ! singleforce
-                    r_v(1) = src%srcrs(1,i)
-                    s_v(1) = src%srcrs(2,i)
-                    call vdm2D(srcTemp(:,i),r_v,s_v)
-                    srcInt(:,i)=matmul(vdmTinv,srcTemp(:,i))
+                r_v(1) = src%srcrs(1,i)
+                s_v(1) = src%srcrs(2,i)
+                call vdm2D(srcTemp(:,i),r_v,s_v)
+                srcInt(:,i)=matmul(vdmTinv,srcTemp(:,i))
 
-                    ! set t0 to a save value
-                    t0(i)=1.2/src%srcf0(i)
-                    srcelemv(src%srcelem(i)) = i
-                else if (src%srctype(i) == 1) then !momenttensor
-                    r_v(1) = src%srcrs(1,i)
-                    s_v(1) = src%srcrs(2,i)
-                    call vdm2D(srcTemp(:,i),r_v,s_v)
-                    srcInt(:,i)=matmul(vdmTinv,srcTemp(:,i))
-                    ! set t0 to a save value
-                    t0(i)=1.2/src%srcf0(i)
-                    srcelemv(src%srcelem(i)) = i
+                ! set t0 to a save value
+                t0(i)=1.2/src%srcf0(i)
+                srcelemv(src%srcelem(i)) = i
 
+                if (src%srctype(i) == 1) then  ! momenttensor
                     M(1,1)=src%srcm(1,i) !Mxx
                     M(1,2)=src%srcm(3,i) !Mxz
                     M(2,1)=src%srcm(3,i) !Mzx
@@ -480,8 +532,46 @@ module timeloopMod
                     end do
                 end if
             end do
+            t0maxtmp = maxval(t0)
         end if
 
+        call sync_mpi()
+        call maxval_real_all(t0maxtmp,t0max,CUSTOM_REAL)
+
+        if (.not. par%shift_sources) then
+            if (mesh%has_src) then
+                do i=1,src%nsrc
+                    t0(i)=0.
+                enddo
+            endif
+
+            if (-t0max < par%simt0) then
+                simt0 = -t0max
+                if (myrank == 0) then
+                    call add(errmsg, 1, "Source(s) started earlier than chosen simt0, so we changed simt0!", myname)
+                end if
+                if (par%log .and. myrank == 0) then
+                    write(*,'(a80)') "|        Source(s) start earlier than chosen simt0, so we change simt0!        |"
+                    write(*,'(a40, f10.7, a30)') "|                       original simt0: ", par%simt0, "                             |"
+                    write(*,'(a40, f10.7, a30)') "|                            new simt0: ", simt0, "                             |"
+                    write(*,'(a80)') "|------------------------------------------------------------------------------|"
+                end if
+            else
+                simt0 = par%simt0
+            endif
+        else
+            simt0 = par%simt0
+        endif
+
+        if (par%autoshift) then
+            if (par%shift_sources) then
+                ! This shifts the seismograms so that t=0 actually is the maximum of the wavelet with the smallest frequency (Ricker, Gaussian).
+                par%plott0 = t0max ! 1.2/f0
+            else
+                par%plott0 = 0.
+            end if
+            ! else par%plott0 remains the same as provided in the parfile
+        end if
 
         ! set up rec interpolation
         if (mesh%has_rec) then
@@ -497,52 +587,78 @@ module timeloopMod
         ! choose source time function
         if (mesh%has_src) then
             do i=1,src%nsrc
-                do it=1,par%nt
-                    time = (float(it)-1.)*dt
-                    if (src%srcstf(i) == 1) then !GAUSS
-                        plotstf(it,1,i) = time
-                        plotDiffstf(it,1,i) = time
-                        plotstf(it,2,i) = -stfGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                        plotDiffstf(it,2,i) = -stfDiffGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                    else if (src%srcstf(i) == 2) then !RICKER
-                        plotstf(it,1,i) = time
-                        plotDiffstf(it,1,i) = time
-                        plotstf(it,2,i) = -stfRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                        plotDiffstf(it,2,i) = -stfDiffRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                    else if (src%srcstf(i) == 3) then !SIN^3
-                        plotstf(it,1,i) = time
-                        plotDiffstf(it,1,i) = time
-                        plotstf(it,2,i) = -stfSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                        plotDiffstf(it,2,i) = -stfDiffSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                    else if (src%srcstf(i) > 4) then
+                select case (src%srcstf(i))
+                    case (1) !GAUSS
+                        do it=1,par%nt
+                            time = (float(it)-1.)*dt + simt0
+                            select case (src%srctype(i))
+                                case (0)  ! single force
+                                    plotstf(it,1,i) = time
+                                    plotstf(it,2,i) = -stfGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                case (1)  ! moment tensor
+                                    plotDiffstf(it,2,i) = -stfDiffGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                    plotDiffstf(it,1,i) = time
+                            end select
+                        enddo
+                    case (2) !RICKER
+                        do it=1,par%nt
+                            time = (float(it)-1.)*dt + simt0
+                            select case (src%srctype(i))
+                                case (0)  ! single force
+                                    plotstf(it,1,i) = time
+                                    plotstf(it,2,i) = -stfRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                case (1)  ! moment tensor
+                                    plotDiffstf(it,1,i) = time
+                                    plotDiffstf(it,2,i) = -stfDiffRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                            end select
+                        enddo
+                    case (3) !SIN^3
+                        do it=1,par%nt
+                            time = (float(it)-1.)*dt + simt0
+                            select case (src%srctype(i))
+                                case (0)  ! single force
+                                    plotstf(it,1,i) = time
+                                    plotstf(it,2,i) = -stfSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                case (1)  ! moment tensor
+                                    plotDiffstf(it,1,i) = time
+                                    plotDiffstf(it,2,i) = -stfDiffSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                            end select
+                        enddo
+                    case (4) !EXTERNAL
+                        filename=src%extwavelet(i)
+                        select case (src%srctype(i))
+                            case (0)  ! single force
+                                call stfExternal(plotstf(:,2,i),plotstf(:,1,i),dt,par%nt,.true.,6,3,trim(filename),0, errmsg)
+                            case (1)  ! moment tensor
+                                call stfExternal(plotDiffstf(:,2,i),plotDiffstf(:,1,i),dt,par%nt,.true.,6,3,trim(filename),1, errmsg)
+                        end select
+                    case default
                         call add(errmsg, 2, "Chose a valid source time function. Available functions are listed in the 'source' parameter file.", myname, "data/source")
                         call print(errmsg)
                         call stop_mpi()
-                    end if
-                end do
-                if (src%srcstf(i) == 4) then
-                    filename=src%extwavelet(i)
-                    call stfExternal(plotstf(:,2,i),plotstf(:,1,i),dt,par%nt,.true.,6,3,trim(filename),0, errmsg)
-                    call stfExternal(plotDiffstf(:,2,i),plotDiffstf(:,1,i),dt,par%nt,.true.,6,3,trim(filename),1, errmsg)
-                end if
+                end select
 
                 ! write stf
-                write(filename,"('out/stf',i6.6, '_rank', i7.7)") i, myrank+1
-                write(*,'(a40, a25, a15)')  "|     write sourcetimefunction to file: ", filename, "              |"
-                write(*,"(a80)") "|------------------------------------------------------------------------------|"
-                open(unit=27,file=trim(filename),status='unknown')
-                do it=1,par%nt
-                    write(27,*) plotstf(it,1,i),plotstf(it,2,i)
-                end do
-                close(27)
-                write(filename,"('out/stfdiff',i6.6, '_rank', i7.7)") i, myrank+1
-                write(*,'(a40, a30, a10)')  "|     write sourcetimefunction to file: ", filename, "         |"
-                write(*,"(a80)") "|------------------------------------------------------------------------------|"
-                open(unit=27,file=trim(filename),status='unknown')
-                do it=1,par%nt
-                    write(27,*) plotDiffstf(it,1,i),plotDiffstf(it,2,i)
-                end do
-                close(27)
+                select case (src%srctype(i))
+                    case (0)  ! single force
+                        write(filename,"('out/stf',i6.6, '_rank', i7.7)") i, myrank+1
+                        write(*,'(a40, a25, a15)')  "|     write sourcetimefunction to file: ", filename, "              |"
+                        write(*,"(a80)") "|------------------------------------------------------------------------------|"
+                        open(unit=27,file=trim(filename),status='unknown')
+                        do it=1,par%nt
+                            write(27,*) plotstf(it,1,i),plotstf(it,2,i)
+                        end do
+                        close(27)
+                    case (1)  ! moment tensor
+                        write(filename,"('out/stfdiff',i6.6, '_rank', i7.7)") i, myrank+1
+                        write(*,'(a40, a30, a10)')  "|     write sourcetimefunction to file: ", filename, "         |"
+                        write(*,"(a80)") "|------------------------------------------------------------------------------|"
+                        open(unit=27,file=trim(filename),status='unknown')
+                        do it=1,par%nt
+                            write(27,*) plotDiffstf(it,1,i),plotDiffstf(it,2,i)
+                        end do
+                        close(27)
+                end select
             end do
         end if
 
@@ -558,10 +674,10 @@ module timeloopMod
         q_send = 0.
         do i=1,mesh%mpi_nn
             do ie=1,mesh%mpi_ne ! loop over interface elements
-                do k=1,5
+                do k=1,dimens
                     do j=1,NGLL
                         if ( mesh%mpi_connection(i,ie,1) >0) then
-                            q_send((ie-1)*5*NGLL + (k-1)*NGLL + j,i) = &
+                            q_send((ie-1)*dimens*NGLL + (k-1)*NGLL + j,i) = &
                                 qm(mesh%ibt(j,mesh%mpi_connection(i,ie,2),mesh%mpi_connection(i,ie,1)),k)
                         end if
                     end do
@@ -572,8 +688,8 @@ module timeloopMod
         !send and rec
         do i=1,mesh%mpi_nn
             dest=mesh%mpi_neighbor(i)-1
-            call isendV_real(q_send(:,i),(mesh%mpi_ne*5*NGLL),dest,tag,req,CUSTOM_REAL)
-            call irecV_real(q_rec(:,i),(mesh%mpi_ne*5*NGLL),dest,tag,req_r,CUSTOM_REAL)
+            call isendV_real(q_send(:,i),(mesh%mpi_ne*dimens*NGLL),dest,tag,req,CUSTOM_REAL)
+            call irecV_real(q_rec(:,i),(mesh%mpi_ne*dimens*NGLL),dest,tag,req_r,CUSTOM_REAL)
             call wait_req(req)
             call wait_req(req_r)
         end do
@@ -582,7 +698,7 @@ module timeloopMod
         do i=1,mesh%mpi_nn
             c = 1
             do ie=1,mesh%mpi_ne
-                do k=1,5
+                do k=1,dimens
                     do j=1,NGLL
                         if ( mesh%mpi_connection(i,ie,1) > 0) then
                             qi(j,k,ie,i) = q_rec(c,i)
@@ -604,6 +720,8 @@ module timeloopMod
             call initialTimestamp(timestamp)
             write(*,"(a80)") "|                             starting timeloop...                             |"
             write(*, "(a40, es12.5, a28)") "|                                   dt: ", dt, "                           |"
+            write(*, "(a40, i12, a28)") "|                                   nt: ", par%nt, "                           |"
+            write(*, "(a40, es12.5, a28)") "|                 total simulated time: ", dt*par%nt, "                           |"
             write(*,"(a80)") "|------------------------------------------------------------------------------|"
         end if
         ! ---------------------------------------------------------------------------------------------
@@ -611,12 +729,13 @@ module timeloopMod
         ! ---------------------------------------------------------------------------------------------
         do it=1,par%nt ! timeloop
             if (myrank == 0) then
-                localtime = it * dt
+                localtime = (float(it)-1.) * dt + simt0
             end if
             rk_time=0.
-            stf(it)=(it-1)*dt
+            stf(it) = (float(it)-1.) * dt + simt0
             ! interpolate receivers
-            if (mesh%has_rec) then
+            if (mesh%has_rec .and. mod(it,par%subsampling_factor) == 0) then
+                isample = int(it/par%subsampling_factor)
                 do r=1,rec%nrec
                     iv = mesh%ibool(:,rec%recelem(r))
                     ! Calculate divergence and curl of the velocity component in order to create separate seismograms for
@@ -624,39 +743,49 @@ module timeloopMod
                     if (par%curl) then
                         call curl2d(q(iv,4),q(iv,5),mesh%rx(iv),mesh%sx(iv),mesh%rz(iv),mesh%sz(iv),mesh%Dr,mesh%Ds,curl)
                         do j = 1, Np
-                            plot_t(r, it) = plot_t(r, it) + curl(j,2)*recint(j,r)
+                            plot_t(r, isample) = plot_t(r, isample) + curl(j,2)*recint(j,r)
                         end do
                     end if
                     if (par%div) then
                         call div2d(div,q(iv,4),q(iv,5),mesh%Dr,mesh%Ds,mesh%rx(iv),mesh%sx(iv),mesh%rz(iv),mesh%sz(iv))
                         do j = 1, Np
-                            plot_r(r, it) = plot_r(r, it) + div(j)*recint(j,r)
+                            plot_r(r, isample) = plot_r(r, isample) + div(j)*recint(j,r)
                         end do
                     end if
 
                     do j=1,Np
                         iglob=mesh%ibool(j,rec%recelem(r))
-                        plotux(r,it) = plotux(r,it) + ux(iglob)*recint(j,r)
-                        plotuz(r,it) = plotuz(r,it) + uz(iglob)*recint(j,r)
-                        plotv(r,it)  = plotv(r,it)  + q(iglob,4)*recint(j,r)
-                        plotw(r,it)  = plotw(r,it)  + q(iglob,5)*recint(j,r)
-                        plotax(r,it) = plotax(r,it) + ax(iglob)*recint(j,r)
-                        plotaz(r,it) = plotaz(r,it) + az(iglob)*recint(j,r)
+                        plotux(r,isample) = plotux(r,isample) + ux(iglob)  * recint(j,r)
+                        plotuz(r,isample) = plotuz(r,isample) + uz(iglob)  * recint(j,r)
+                        plotv(r,isample)  = plotv(r,isample)  + q(iglob,4) * recint(j,r)
+                        plotw(r,isample)  = plotw(r,isample)  + q(iglob,5) * recint(j,r)
+                        plotax(r,isample) = plotax(r,isample) + ax(iglob)  * recint(j,r)
+                        plotaz(r,isample) = plotaz(r,isample) + az(iglob)  * recint(j,r)
+                        if (par%poroelastic .and. mesh%nfluids >= 1) then
+                            plotp1(r,isample)  = plotp1(r,isample) + q(iglob,6) * recint(j,r)
+                            plotv1x(r,isample) = plotv1x(r,isample) + q(iglob,7) * recint(j,r)
+                            plotv1z(r,isample) = plotv1z(r,isample) + q(iglob,8) * recint(j,r)
+                            if (mesh%nfluids == 2) then
+                                plotp2(r,isample)  = plotp2(r,isample) + q(iglob,9) * recint(j,r)
+                                plotv1x(r,isample) = plotv1x(r,isample) + q(iglob,7) * recint(j,r)
+                                plotv1z(r,isample) = plotv1z(r,isample) + q(iglob,8) * recint(j,r)
+                            endif
+                        endif
                     end do
                     ! rotate receivers
-                    angle_temp = (par%rec_angle*PI)/180.
-                    ux_temp = cos(angle_temp) * plotux(r,it) + sin(angle_temp) * plotuz(r,it)
-                    uz_temp = -sin(angle_temp) * plotux(r,it) + cos(angle_temp) * plotuz(r,it)
-                    vx_temp = cos(angle_temp) * plotv(r,it) + sin(angle_temp) * plotw(r,it)
-                    vz_temp = -sin(angle_temp) * plotv(r,it) + cos(angle_temp) * plotw(r,it)
-                    ax_temp = cos(angle_temp) * plotax(r,it) + sin(angle_temp) * plotaz(r,it)
-                    az_temp = -sin(angle_temp) * plotax(r,it) + cos(angle_temp) * plotaz(r,it)
-                    plotux(r,it) = ux_temp
-                    plotuz(r,it) = uz_temp
-                    plotv(r,it) = vx_temp
-                    plotw(r,it) = vz_temp
-                    plotax(r,it) = ax_temp
-                    plotaz(r,it) = az_temp
+                    angle_temp = (rec%rec_ang(r)*PI)/180.
+                    ux_temp = cos(angle_temp) * plotux(r,isample) + sin(angle_temp) * plotuz(r,isample)
+                    uz_temp = -sin(angle_temp) * plotux(r,isample) + cos(angle_temp) * plotuz(r,isample)
+                    vx_temp = cos(angle_temp) * plotv(r,isample) + sin(angle_temp) * plotw(r,isample)
+                    vz_temp = -sin(angle_temp) * plotv(r,isample) + cos(angle_temp) * plotw(r,isample)
+                    ax_temp = cos(angle_temp) * plotax(r,isample) + sin(angle_temp) * plotaz(r,isample)
+                    az_temp = -sin(angle_temp) * plotax(r,isample) + cos(angle_temp) * plotaz(r,isample)
+                    plotux(r,isample) = ux_temp
+                    plotuz(r,isample) = uz_temp
+                    plotv(r,isample) = vx_temp
+                    plotw(r,isample) = vz_temp
+                    plotax(r,isample) = ax_temp
+                    plotaz(r,isample) = az_temp
                 end do
             end if
 
@@ -665,46 +794,79 @@ module timeloopMod
             stf_val = 0.
             stf_val_diff = 0.
             do irk=1,nrk ! runge-kutta loop
-                time = (float(it)-1.+rk_time)*dt
+                time = (float(it) - 1. + rk_time) * dt + simt0
                 if (mesh%has_src) then
                     do i=1, src%nsrc
-                        if (src%srcstf(i) == 1) then
-                            stf_val = -stfGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                            stf_val_diff = -stfDiffGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                        else if (src%srcstf(i) == 2) then !RICKER
-                            stf_val = -stfRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                            stf_val_diff = -stfDiffRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                        else if (src%srcstf(i) == 3) then !Sin^3
-                            stf_val = -stfSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                            stf_val_diff = -stfDiffSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
-                        end if
-                        if (src%srcstf(i) == 4) then
-                            if (it<par%nt) then
-                                stf_val=(1.-rk_time)*plotstf(it,2,i)+rk_time*plotstf(it+1,2,i)
-                                stf_val_diff=(1.-rk_time)*plotDiffstf(it,2,i)+rk_time*plotDiffstf(it+1,2,i)
-                            else
-                                stf_val=(1.+rk_time)*plotstf(it,2,i)-rk_time*plotstf(it-1,2,i)
-                                stf_val_diff=(1.+rk_time)*plotDiffstf(it,2,i)-rk_time*plotDiffstf(it-1,2,i)
-                            endif
-                        end if
+                        select case (src%srctype(i))
+                            case (0)  ! single force
+                                select case (src%srcstf(i))
+                                    case (1)  ! GAUSS
+                                        stf_val = -stfGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                    case (2)  ! RICKER
+                                        stf_val = -stfRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                    case (3)  ! SIN^3
+                                        stf_val = -stfSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                    case (4)  ! EXTERNAL
+                                        if (it<par%nt) then
+                                            stf_val=(1.-rk_time)*plotstf(it,2,i)+rk_time*plotstf(it+1,2,i)
+                                        else
+                                            stf_val=(1.+rk_time)*plotstf(it,2,i)-rk_time*plotstf(it-1,2,i)
+                                        endif
+                                end select
 
-                        if (src%srctype(i)==0) then
-                            srcArray(:,1,i)=srcInt(:,i)*(-sin((src%srcangle_force(i)*PI)/180.)*stf_val)/mesh%rho(src%srcelem(i))
-                            srcArray(:,2,i)=srcInt(:,i)*(+cos((src%srcangle_force(i)*PI)/180.)*stf_val)/mesh%rho(src%srcelem(i))
+                                if (par%poroelastic) then
+                                    srcArray(:,1,i)=srcInt(:,i)*(-sin((src%srcangle_force(i)*PI)/180.)*stf_val)*(-mesh%A(4,1,src%srcelem(i)))
+                                    srcArray(:,2,i)=srcInt(:,i)*(+cos((src%srcangle_force(i)*PI)/180.)*stf_val)*(-mesh%B(5,2,src%srcelem(i)))
+                                    if (mesh%nfluids >= 1) then
+                                        srcArray(:,3,i)=srcInt(:,i)*(-sin((src%srcangle_force(i)*PI)/180.)*stf_val)*(-mesh%A(7,1,src%srcelem(i)))
+                                        srcArray(:,4,i)=srcInt(:,i)*(+cos((src%srcangle_force(i)*PI)/180.)*stf_val)*(-mesh%B(8,2,src%srcelem(i)))
+                                        if (mesh%nfluids == 2) then
+                                            srcArray(:,5,i)=srcInt(:,i)*(-sin((src%srcangle_force(i)*PI)/180.)*stf_val)*(-mesh%A(10,1,src%srcelem(i)))
+                                            srcArray(:,6,i)=srcInt(:,i)*(+cos((src%srcangle_force(i)*PI)/180.)*stf_val)*(-mesh%B(11,2,src%srcelem(i)))
+                                        endif
+                                    endif
+                                else
+                                    srcArray(:,1,i)=srcInt(:,i)*(-sin((src%srcangle_force(i)*PI)/180.)*stf_val)/mesh%rho(src%srcelem(i))
+                                    srcArray(:,2,i)=srcInt(:,i)*(+cos((src%srcangle_force(i)*PI)/180.)*stf_val)/mesh%rho(src%srcelem(i))
+                                endif
 
-                            iv=mesh%ibool(:,src%srcelem(i))
-                            srcArray(:,1,i)=matmul(invmass,srcArray(:,1,i))/mesh%jacobian(iv)
-                            srcArray(:,2,i)=matmul(invmass,srcArray(:,2,i))/mesh%jacobian(iv)
-                        else if (src%srctype(i)==1) then
-                            srcArrayM(:,1,i)=srcInt(:,i)*(ms(1,1)*stf_val_diff)
-                            srcArrayM(:,2,i)=srcInt(:,i)*(ms(2,2)*stf_val_diff)
-                            srcArrayM(:,3,i)=srcInt(:,i)*(ms(1,2)*stf_val_diff)
+                                iv=mesh%ibool(:,src%srcelem(i))
+                                srcArray(:,1,i)=matmul(invmass,srcArray(:,1,i))/mesh%jacobian(iv)
+                                srcArray(:,2,i)=matmul(invmass,srcArray(:,2,i))/mesh%jacobian(iv)
+                                if (par%poroelastic .and. mesh%nfluids >= 1) then
+                                    srcArray(:,3,i)=matmul(invmass,srcArray(:,3,i))/mesh%jacobian(iv)
+                                    srcArray(:,4,i)=matmul(invmass,srcArray(:,4,i))/mesh%jacobian(iv)
+                                    if (mesh%nfluids == 2) then
+                                        srcArray(:,5,i)=matmul(invmass,srcArray(:,5,i))/mesh%jacobian(iv)
+                                        srcArray(:,6,i)=matmul(invmass,srcArray(:,6,i))/mesh%jacobian(iv)
+                                    endif
+                                endif
 
-                            iv=mesh%ibool(:,src%srcelem(i))
-                            srcArrayM(:,1,i)=matmul(invmass,srcArrayM(:,1,i))/mesh%jacobian(iv)
-                            srcArrayM(:,2,i)=matmul(invmass,srcArrayM(:,2,i))/mesh%jacobian(iv)
-                            srcArrayM(:,3,i)=matmul(invmass,srcArrayM(:,3,i))/mesh%jacobian(iv)
-                        end if
+                            case (1)  ! moment tensor
+                                select case (src%srcstf(i))
+                                    case (1)  ! GAUSS
+                                        stf_val_diff = -stfDiffGauss(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                    case (2)  ! RICKER
+                                        stf_val_diff = -stfDiffRicker(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                    case (3)  ! SIN^3
+                                        stf_val_diff = -stfDiffSin3(time,src%srcf0(i),t0(i)+src%delay(i),src%srcfactor(i))
+                                    case (4)  ! EXTERNAL
+                                        if (it<par%nt) then
+                                            stf_val_diff=(1.-rk_time)*plotDiffstf(it,2,i)+rk_time*plotDiffstf(it+1,2,i)
+                                        else
+                                            stf_val_diff=(1.+rk_time)*plotDiffstf(it,2,i)-rk_time*plotDiffstf(it-1,2,i)
+                                        endif
+                                end select
+
+                                srcArrayM(:,1,i)=srcInt(:,i)*(ms(1,1)*stf_val_diff)
+                                srcArrayM(:,2,i)=srcInt(:,i)*(ms(2,2)*stf_val_diff)
+                                srcArrayM(:,3,i)=srcInt(:,i)*(ms(1,2)*stf_val_diff)
+
+                                iv=mesh%ibool(:,src%srcelem(i))
+                                srcArrayM(:,1,i)=matmul(invmass,srcArrayM(:,1,i))/mesh%jacobian(iv)
+                                srcArrayM(:,2,i)=matmul(invmass,srcArrayM(:,2,i))/mesh%jacobian(iv)
+                                srcArrayM(:,3,i)=matmul(invmass,srcArrayM(:,3,i))/mesh%jacobian(iv)
+                        end select
                     end do
                 end if
                 qm=q
@@ -722,12 +884,12 @@ module timeloopMod
                 ! build send buffer
                 do i=1,mesh%mpi_nn
                     do ie=1,mesh%mpi_ne ! loop over interface elements
-                        do k=1,5
+                        do k=1,dimens
                             do j=1,NGLL
                                 if ( mesh%mpi_connection(i,ie,1) >0) then
-                                    q_send((ie-1)*5*NGLL + (k-1)*NGLL + j,i) = &
+                                    q_send((ie-1)*dimens*NGLL + (k-1)*NGLL + j,i) = &
                                         qm(mesh%ibt(j,mesh%mpi_connection(i,ie,2),mesh%mpi_connection(i,ie,1)),k)
-                                    rq_send((ie-1)*5*NGLL + (k-1)*NGLL + j,i) = &
+                                    rq_send((ie-1)*dimens*NGLL + (k-1)*NGLL + j,i) = &
                                         rqm(mesh%ibt(j,mesh%mpi_connection(i,ie,2),mesh%mpi_connection(i,ie,1)),k)
                                 end if
                             end do
@@ -738,12 +900,12 @@ module timeloopMod
                 ! send and rec
                 do i=1,mesh%mpi_nn
                     dest=mesh%mpi_neighbor(i)-1
-                    call isendV_real(q_send(:,i),(mesh%mpi_ne*5*NGLL),dest,tag,req,CUSTOM_REAL)
-                    call irecV_real(q_rec(:,i),(mesh%mpi_ne*5*NGLL),dest,tag,req_r,CUSTOM_REAL)
+                    call isendV_real(q_send(:,i),(mesh%mpi_ne*dimens*NGLL),dest,tag,req,CUSTOM_REAL)
+                    call irecV_real(q_rec(:,i),(mesh%mpi_ne*dimens*NGLL),dest,tag,req_r,CUSTOM_REAL)
                     call wait_req(req)
                     call wait_req(req_r)
-                    call isendV_real(rq_send(:,i),(mesh%mpi_ne*5*NGLL),dest,tag_r,req,CUSTOM_REAL)
-                    call irecV_real(rq_rec(:,i),(mesh%mpi_ne*5*NGLL),dest,tag_r,req_r,CUSTOM_REAL)
+                    call isendV_real(rq_send(:,i),(mesh%mpi_ne*dimens*NGLL),dest,tag_r,req,CUSTOM_REAL)
+                    call irecV_real(rq_rec(:,i),(mesh%mpi_ne*dimens*NGLL),dest,tag_r,req_r,CUSTOM_REAL)
                     call wait_req(req)
                     call wait_req(req_r)
                 end do
@@ -752,7 +914,7 @@ module timeloopMod
                 do i=1,mesh%mpi_nn
                     c = 1
                     do ie=1,mesh%mpi_ne
-                        do k=1,5
+                        do k=1,dimens
                             do j=1,NGLL
                                 if ( mesh%mpi_connection(i,ie,1) > 0) then
                                     qi(j,k,ie,i) = q_rec(c,i)
@@ -779,21 +941,28 @@ module timeloopMod
                             qtemp=qm(iv,:)
 
                             ! get fluxes
-                            call elasticFluxes(qtemp,elasticfluxvar(ie,:),ftemp,gtemp)
+                            if (par%poroelastic) then
+                                call poroelasticFluxes(qtemp,mesh%A(:,:,ie),mesh%B(:,:,ie),mesh%E(:,:,ie),ftemp,gtemp,htemp)
+                            else
+                                call elasticFluxes(qtemp,elasticfluxvar(ie,:),ftemp,gtemp)
+                            endif
 
                             if (pmlcheck(ie)) then
-                                do i=1,5
+                                do i=1,dimens
                                     ftemp(:,i) = (fprimem(iv,i) + ftemp(:,i))/kx(iv)
                                     gtemp(:,i) = (gprimem(iv,i) + gtemp(:,i))/kz(iv)
                                 enddo
                             end if
                             ! comp strong deriverate
-                            do i=1,5
+                            do i=1,dimens
                                 dFdr = matmul(mesh%Dr,ftemp(:,i))
                                 dFds = matmul(mesh%Ds,ftemp(:,i))
                                 dGdr = matmul(mesh%Dr,gtemp(:,i))
                                 dGds = matmul(mesh%Ds,gtemp(:,i))
                                 rQ(iv,i) = (mesh%rx(iv)*dFdr + mesh%sx(iv)*dFds) + (mesh%rz(iv)*dGdr + mesh%sz(iv)*dGds)
+                                if (par%poroelastic) then
+                                    rQ(iv,i) = rQ(iv,i) + htemp(:,i)
+                                endif
                             end do
 
                             if (par%attenuation) then
@@ -808,9 +977,15 @@ module timeloopMod
                             end if
 
                             ! compute fluxes on the surface
-                            call computeExactRiemannSF(flux,qm,qi,mesh%neighbor(:,ie),VT(ie,:,:,:), VTfree(ie,:,:,:),&
-                                mesh%face(:,ie),mesh%mpi_interface(:,:,ie),mesh%mpi_ibool(:,ie), mesh%mpi_ibt(:,:,ie),&
-                                mesh%ibt(:,:,ie),mesh%ibn(:,:,ie),5)
+                            if (par%poroelastic) then
+                                call computeExactRiemannSF(flux,qm,qi,mesh%neighbor(:,ie),mesh%AP(:,:,ie),&
+                                    mesh%face(:,ie),mesh%mpi_interface(:,:,ie),mesh%mpi_ibool(:,ie), mesh%mpi_ibt(:,:,ie),&
+                                    mesh%ibt(:,:,ie),mesh%ibn(:,:,ie),mesh%nx(:,ie),mesh%nz(:,ie),free,dimens)
+                            else
+                                call computeExactRiemannSF(flux,qm,qi,mesh%neighbor(:,ie),VT(ie,:,:,:), VTfree(ie,:,:,:),&
+                                    mesh%face(:,ie),mesh%mpi_interface(:,:,ie),mesh%mpi_ibool(:,ie), mesh%mpi_ibt(:,:,ie),&
+                                    mesh%ibt(:,:,ie),mesh%ibn(:,:,ie),5)
+                            endif
 
                             if(par%attenuation) then
                                 call computeExactRiemannSF(aflux,qm,qi,mesh%neighbor(:,ie),aVT(ie,:,:,:), aVTfree(ie,:,:,:),&
@@ -832,7 +1007,7 @@ module timeloopMod
                                 end do
                             end if
                             ! lift surface integral
-                            do i=1,5
+                            do i=1,dimens
                                 rq(iv,i) = rq(iv,i) + matmul(mesh%lift,mesh%fscale(:,ie)*flux(:,i)/2.0)
                             end do
                             !End of calculation of the rhs
@@ -844,7 +1019,14 @@ module timeloopMod
                     do i=1,src%nsrc
                         if (src%srcelem(i)==ie) then      ! add source term
                             if (src%srctype(i) == 0) then
+                                !single force
                                 rq(iv,4:5)=rq(iv,4:5)+srcArray(:,1:2,i)
+                                if (par%poroelastic .and. mesh%nfluids >= 1) then
+                                    rq(iv,7:8)=rq(iv,7:8)+srcArray(:,3:4,i)
+                                    if (mesh%nfluids == 2) then
+                                        rq(iv,10:11)=rq(iv,10:11)+srcArray(:,5:6,i)
+                                    endif
+                                endif
                             elseif (src%srctype(i) == 1) then
                                 rq(iv,1:3)=rq(iv,1:3)+srcArrayM(:,1:3,i)
                             endif
@@ -870,11 +1052,11 @@ module timeloopMod
                                 endif
                             endif
 
-                            q(iv,1:5) = q(iv,1:5) + dt*rq(iv,1:5)
+                            q(iv,:) = q(iv,:) + dt*rq(iv,:)
 
                             !pml
                             if (pmlcheck(ie)) then
-                                do i=1,5
+                                do i=1,dimens
                                     fprime(iv,i) = fprime(iv,i) + dt*(-alphax(iv)*fprime(iv,i) - ddx(iv)/kx(iv)*(fprime(iv,i)+ftemp(:,i)))
                                     gprime(iv,i) = gprime(iv,i) + dt*(-alphaz(iv)*gprime(iv,i) - ddz(iv)/kz(iv)*(gprime(iv,i)+gtemp(:,i)))
                                 end do
@@ -904,11 +1086,11 @@ module timeloopMod
                             rk_time=1.
                         end if !rk==1
                         if (irk==2) then
-                            q(iv,1:5) = onehalf*(qn(iv,1:5) + q(iv,1:5) + dt*rq(iv,1:5))
+                            q(iv,1:dimens) = onehalf*(qn(iv,:) + q(iv,:) + dt*rq(iv,:))
 
                             !pml
                             if (pmlcheck(ie)) then
-                                do i=1,5
+                                do i=1,dimens
                                     fprime(iv,i) = onehalf* (fprimen(iv,i) + fprime(iv,i) + dt*(-alphax(iv)*fprime(iv,i) - ddx(iv)/kx(iv)*(fprime(iv,i)+ftemp(:,i))))
                                     gprime(iv,i) = onehalf* (gprimen(iv,i) + gprime(iv,i) + dt*(-alphaz(iv)*gprime(iv,i) - ddz(iv)/kz(iv)*(gprime(iv,i)+gtemp(:,i))))
                                 end do
@@ -955,10 +1137,10 @@ module timeloopMod
                                 endif
                             endif
 
-                            q(iv,1:5) = q(iv,1:5) + dt*rq(iv,1:5)
+                            q(iv,:) = q(iv,:) + dt*rq(iv,:)
                             !PML
                             if (pmlcheck(ie)) then
-                                do i=1,5
+                                do i=1,dimens
                                     fprime(iv,i) = fprime(iv,i) + dt*(-alphax(iv)*fprime(iv,i) - ddx(iv)/kx(iv)*(fprime(iv,i)+ftemp(:,i)))
                                     gprime(iv,i) = gprime(iv,i) + dt*(-alphaz(iv)*gprime(iv,i) - ddz(iv)/kz(iv)*(gprime(iv,i)+gtemp(:,i)))
                                 end do
@@ -989,10 +1171,10 @@ module timeloopMod
                             rk_time=1.
                         end if !rk==1
                         if (irk==2) then
-                            q(iv,1:5) = threefor*qn(iv,1:5) + onefor*(q(iv,1:5) + dt*rq(iv,1:5))
+                            q(iv,:) = threefor*qn(iv,:) + onefor*(q(iv,:) + dt*rq(iv,:))
                             !PML
                             if (pmlcheck(ie)) then
-                                do i=1,5
+                                do i=1,dimens
                                     fprime(iv,i) = threefor*fprimen(iv,i) + onefor*(fprime(iv,i) + dt*(-alphax(iv)*fprime(iv,i) - ddx(iv)/kx(iv)*(fprime(iv,i)+ftemp(:,i))))
                                     gprime(iv,i) = threefor*gprimen(iv,i) + onefor*(gprime(iv,i) + dt*(-alphaz(iv)*gprime(iv,i) - ddz(iv)/kz(iv)*(gprime(iv,i)+gtemp(:,i))))
                                 end do
@@ -1023,10 +1205,10 @@ module timeloopMod
                             rk_time=0.5
                         end if !rk==2
                         if (irk==3) then
-                            q(iv,1:5) = onethree*qn(iv,1:5) + twothree*(q(iv,1:5) + dt*rq(iv,1:5))
+                            q(iv,:) = onethree*qn(iv,:) + twothree*(q(iv,:) + dt*rq(iv,:))
                             !PML
                             if (pmlcheck(ie)) then
-                                do i=1,5
+                                do i=1,dimens
                                     fprime(iv,i) = onethree*fprimen(iv,i) + twothree*(fprime(iv,i) + dt*(-alphax(iv)*fprime(iv,i) - ddx(iv)/kx(iv)*(fprime(iv,i)+ftemp(:,i))))
                                     gprime(iv,i) = onethree*gprimen(iv,i) + twothree*(gprime(iv,i) + dt*(-alphaz(iv)*gprime(iv,i) - ddz(iv)/kz(iv)*(gprime(iv,i)+gtemp(:,i))))
                                 end do
@@ -1057,11 +1239,11 @@ module timeloopMod
                         end if !rk==3
                     ! RK 4
                     else if (wrk == 3) then
-                        resQ(iv, 1:5) = rk4a(irk)*resQ(iv, 1:5) + dt*rq(iv,1:5)
-                        q(iv, 1:5) = q(iv, 1:5) + rk4b(irk)*resQ(iv, 1:5)
+                        resQ(iv, :) = rk4a(irk)*resQ(iv, :) + dt*rq(iv,:)
+                        q(iv, :) = q(iv, :) + rk4b(irk)*resQ(iv, :)
                         !pml
                         if (pmlcheck(ie)) then
-                            do i=1,5
+                            do i=1,dimens
                                 resFprime(iv,i) = rk4a(irk)*resFprime(iv,i) + dt*(-alphax(iv)*fprime(iv,i) - ddx(iv)/kx(iv)*(fprime(iv,i)+ftemp(:,i)))
                                 resGprime(iv,i) = rk4a(irk)*resGprime(iv,i) + dt*(-alphaz(iv)*gprime(iv,i) - ddz(iv)/kz(iv)*(gprime(iv,i)+gtemp(:,i)))
                                 fprime(iv,i)    = fprime(iv,i) + rk4b(irk)*resFprime(iv,i)
@@ -1103,10 +1285,20 @@ module timeloopMod
                         ux(iv) = ux(iv) + dt*q(iv,4)
                         uz(iv) = uz(iv) + dt*q(iv,5)
                         uplot(iv) = sqrt(ux(iv)**2+uz(iv)**2)
-                        if (movie%movie .and. movie%velocity) then
-                            !Calculate the norm of the velocity
-                            vplot(iv) = sqrt(q(iv,4)**2+q(iv,5)**2)
-                        end if
+                        if (movie%movie) then
+                            if (movie%velocity) then
+                                !Calculate the norm of the velocity
+                                vplot(iv) = sqrt(q(iv,4)**2+q(iv,5)**2)
+                            endif
+                            if (par%poroelastic .and. mesh%nfluids >= 1 .and. movie%v1) then
+                                !Calculate the norm of the velocity
+                                v1plot(iv) = sqrt(q(iv,7)**2+q(iv,8)**2)
+                            endif
+                            if (par%poroelastic .and. mesh%nfluids == 2 .and. movie%v2) then
+                                !Calculate the norm of the velocity
+                                v2plot(iv) = sqrt(q(iv,10)**2+q(iv,11)**2)
+                            endif
+                        endif
 
                         !Acceleration
                         ax(iv) = rq(iv,4)
@@ -1129,9 +1321,11 @@ module timeloopMod
                             enddo
                         endif
 
-                        e(iv,1) = (-mesh%lambda(ie) * a_sigma_tmp(:,2) + (2 * mesh%mu(ie) + mesh%lambda(ie)) * a_sigma_tmp(:,1))/ (4*mesh%mu(ie)**2 + 4 * mesh%lambda(ie)*mesh%mu(ie))
-                        e(iv,2) = ((2 * mesh%mu(ie) + mesh%lambda(ie)) * a_sigma_tmp(:,2) - mesh%lambda(ie)*a_sigma_tmp(:,1))/(4*mesh%mu(ie)**2 + 4*mesh%lambda(ie)*mesh%mu(ie))
-                        e(iv,3) = a_sigma_tmp(:,3)/(2 * mesh%mu(ie))
+                        if (.not. par%poroelastic) then
+                            e(iv,1) = (-mesh%lambda(ie) * a_sigma_tmp(:,2) + (2 * mesh%mu(ie) + mesh%lambda(ie)) * a_sigma_tmp(:,1))/ (4*mesh%mu(ie)**2 + 4 * mesh%lambda(ie)*mesh%mu(ie))
+                            e(iv,2) = ((2 * mesh%mu(ie) + mesh%lambda(ie)) * a_sigma_tmp(:,2) - mesh%lambda(ie)*a_sigma_tmp(:,1))/(4*mesh%mu(ie)**2 + 4*mesh%lambda(ie)*mesh%mu(ie))
+                            e(iv,3) = a_sigma_tmp(:,3)/(2 * mesh%mu(ie))
+                        endif
                     endif
                 end do !element loop
                 call sync_mpi()
@@ -1140,14 +1334,18 @@ module timeloopMod
             do ie=1,mesh%nelem
                 iv=mesh%ibool(:,ie)
                 do i=1,Np
-                    energy_kin(it) = energy_kin(it) + mesh%rho(ie) * (q(iv(i),4)**2 + q(iv(i),5)**2)
+                    if (par%poroelastic) then
+                        energy_kin(it) = energy_kin(it) + 1./mesh%A(4,1,ie) * (q(iv(i),4)**2 + q(iv(i),5)**2)
+                    else
+                        energy_kin(it) = energy_kin(it) + mesh%rho(ie) * (q(iv(i),4)**2 + q(iv(i),5)**2)
+                    endif
                     energy_pot(it) = energy_pot(it) + 0.5 * (q(iv(i),1)*e(iv(i),1) + q(iv(i),2)*e(iv(i),2) + q(iv(i),3)*e(iv(i),3))
                 end do
             end do
             energy(it) = energy_kin(it) + energy_pot(it)
             call sum_real_all(energy(it),all_energy(it), CUSTOM_REAL)
 
-            ! check if energy grows to much, its done with sta/lta trigger to switch off the pml if nessersary
+            ! check if energy grows to much, its done with sta/lta trigger to switch off the pml if necessary
             if(par%use_trigger) then
                 if(par%set_pml) then
                     if(pmlcrit) then
@@ -1197,6 +1395,26 @@ module timeloopMod
                         call writePlotBinaries(ux, "ux", myrank, it)
                         call writePlotBinaries(uz, "uz", myrank, it)
                     end if
+                    if (par%poroelastic .and. mesh%nfluids >= 1) then
+                        if (movie%p1) then
+                            call writePlotBinaries(q(:,6), "p1", myrank, it)
+                        endif
+                        if (movie%v1) then
+                            call writePlotBinaries(v1plot, "normv1", myrank, it)
+                            call writePlotBinaries(q(:,7), "v1x", myrank, it)
+                            call writePlotBinaries(q(:,8), "v1z", myrank, it)
+                        endif
+                        if (mesh%nfluids == 2) then
+                            if (movie%p2) then
+                                call writePlotBinaries(q(:,9), "p2", myrank, it)
+                            endif
+                            if (movie%v2) then
+                                call writePlotBinaries(v2plot, "normv2", myrank, it)
+                                call writePlotBinaries(q(:,10), "v2x", myrank, it)
+                                call writePlotBinaries(q(:,11), "v2z", myrank, it)
+                            endif
+                        end if
+                    end if
                 endif
 
                 if (myrank == 0) then
@@ -1208,30 +1426,46 @@ module timeloopMod
         end do! timeloop
 
         ! save seismos
-            if (mesh%has_rec) then
-                do r=1,rec%nrec
-                    write(filename,"('out/seismo.x.',i7.7,'.sdu')") rec%recnr(r)
-                    call plotPoints2D(stf(:)-par%plott0,plotux(r,:),filename)
-                    write(filename,"('out/seismo.z.',i7.7,'.sdu')") rec%recnr(r)
-                    call plotPoints2D(stf(:)-par%plott0,plotuz(r,:),filename)
-                    write(filename,"('out/seismo.x.',i7.7,'.sdv')") rec%recnr(r)
-                    call plotPoints2D(stf(:)-par%plott0,plotv(r,:),filename)
-                    write(filename,"('out/seismo.z.',i7.7,'.sdv')") rec%recnr(r)
-                    call plotPoints2D(stf(:)-par%plott0,plotw(r,:),filename)
-                    write(filename,"('out/seismo.x.',i7.7,'.sda')") rec%recnr(r)
-                    call plotPoints2D(stf(:)-par%plott0,plotax(r,:),filename)
-                    write(filename,"('out/seismo.z.',i7.7,'.sda')") rec%recnr(r)
-                    call plotPoints2D(stf(:)-par%plott0,plotaz(r,:),filename)
-                    if (par%div) then
-                        write(filename,"('out/seismo.r.',i7.7,'.sdv')") rec%recnr(r)
-                        call plotPoints2D(stf(:)-par%plott0,plot_r(r,:),filename)
-                    end if
-                    if (par%curl) then
-                        write(filename,"('out/seismo.t.',i7.7,'.sdv')") rec%recnr(r)
-                        call plotPoints2D(stf(:)-par%plott0,plot_t(r,:),filename)
-                    end if
-                end do
-            end if
+        if (mesh%has_rec) then
+            do r=1,rec%nrec
+                write(filename,"('out/seismo.x.',i7.7,'.sdu')") rec%recnr(r)
+                call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotux(r,:),filename)
+                write(filename,"('out/seismo.z.',i7.7,'.sdu')") rec%recnr(r)
+                call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotuz(r,:),filename)
+                write(filename,"('out/seismo.x.',i7.7,'.sdv')") rec%recnr(r)
+                call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotv(r,:),filename)
+                write(filename,"('out/seismo.z.',i7.7,'.sdv')") rec%recnr(r)
+                call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotw(r,:),filename)
+                write(filename,"('out/seismo.x.',i7.7,'.sda')") rec%recnr(r)
+                call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotax(r,:),filename)
+                write(filename,"('out/seismo.z.',i7.7,'.sda')") rec%recnr(r)
+                call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotaz(r,:),filename)
+                if (par%poroelastic .and. mesh%nfluids >= 1) then
+                    write(filename,"('out/seismo.p.',i7.7,'.sdp1')") rec%recnr(r)
+                    call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotp1(r,:),filename)
+                    write(filename,"('out/seismo.x.',i7.7,'.sdv1')") rec%recnr(r)
+                    call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotv1x(r,:),filename)
+                    write(filename,"('out/seismo.z.',i7.7,'.sdv1')") rec%recnr(r)
+                    call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotv1z(r,:),filename)
+                    if (mesh%nfluids == 2) then
+                        write(filename,"('out/seismo.p.',i7.7,'.sdp2')") rec%recnr(r)
+                        call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotp2(r,:),filename)
+                        write(filename,"('out/seismo.x.',i7.7,'.sdv2')") rec%recnr(r)
+                        call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotv2x(r,:),filename)
+                        write(filename,"('out/seismo.z.',i7.7,'.sdv2')") rec%recnr(r)
+                        call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plotv2z(r,:),filename)
+                    endif
+                endif
+                if (par%div) then
+                    write(filename,"('out/seismo.r.',i7.7,'.sdv')") rec%recnr(r)
+                    call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plot_r(r,:),filename)
+                end if
+                if (par%curl) then
+                    write(filename,"('out/seismo.t.',i7.7,'.sdv')") rec%recnr(r)
+                    call plotPoints2D(stf(par%subsampling_factor::par%subsampling_factor)-par%plott0,plot_t(r,:),filename)
+                end if
+            end do
+        end if
 
         if (myrank==0) then
             write(filename,"('out/energy')")
@@ -1244,9 +1478,10 @@ module timeloopMod
         end if
         close(27)
 
-        deallocate(ux,uz,ax,az,uplot,vplot)
+        deallocate(ux,uz,ax,az,uplot,vplot,v1plot,v2plot)
         deallocate(rQ,Q,Qn,Qm,e,resQ, resU, u)
         deallocate(energy, all_energy, energy_kin, energy_pot, a_sigma_tmp)
+
         deallocate(a_rQ,theta,thetan,thetam, resTheta, int_theta)
         deallocate(stf)
         deallocate(elasticfluxvar, APA, T, invT, VT, VTfree)
@@ -1268,6 +1503,16 @@ module timeloopMod
         if (mesh%has_rec) then
             deallocate(recInt,recTemp)
             deallocate(plotv,plotw,plotux,plotuz,plotax,plotaz)
+            if (par%poroelastic .and. mesh%nfluids >= 1) then
+                deallocate(plotp1)
+                deallocate(plotv1x)
+                deallocate(plotv1z)
+                if (mesh%nfluids == 2) then
+                    deallocate(plotp2)
+                    deallocate(plotv2x)
+                    deallocate(plotv2z)
+                endif
+            endif
         end if
 
         deallocate(q_send)

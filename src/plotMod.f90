@@ -1,6 +1,7 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -144,7 +145,7 @@ module plotMod
         do it = 1,nframe
             write(timestep,"(i7.7)") it
             filename = "out/movie_element_"//trim(name)//"_it"//trim(timestep)//".vtk"
-            call writeVtkTriMeshRealdata(filename, glob_elem, glob_coord2, tempdata(:,it))
+            call writeVtkTriMeshRealdata(filename, glob_elem, glob_coord2, tempdata(:,it), name)
             call progress(it, nframe)
         end do
     end subroutine
@@ -163,7 +164,7 @@ module plotMod
         do it = 1, nframe
             write(timestep,"(i7.7)") it
             filename = "out/movie_points_"//trim(name)//"_it"//trim(timestep)//".vtk"
-            call writeVtkNodesRealData(filename, xyzplot(1,:),xyzplot(2,:),xyzplot(3,:), data(:,it))
+            call writeVtkNodesRealData(filename, xyzplot(1,:),xyzplot(2,:),xyzplot(3,:), data(:,it), name)
             call progress(it, nframe)
         end do
     end subroutine

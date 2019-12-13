@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 #!python
 #!/usr/bin/env python
 
 #-----------------------------------------------------------------------
-#   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 #
 #   This file is part of NEXD 2D.
 #
@@ -47,7 +48,7 @@ def main():
         inp_file = sys_argv[1]
         out_fold = sys_argv[2]
     except:
-        print "USAGE: \n  createVtkOfInterfaceBetweenLayers.py input_file (.cub) output_folder \n e.g. \n createVtkOfInterfaceBetweenLayers.py cubit/testtri.cub out \n\n"
+        print("USAGE: \n  createVtkOfInterfaceBetweenLayers.py input_file (.cub) output_folder \n e.g. \n createVtkOfInterfaceBetweenLayers.py cubit/testtri.cub out \n\n")
         sys_exit()
 
     start_cubit(inp_file)

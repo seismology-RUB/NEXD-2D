@@ -21,11 +21,16 @@ To install and run the software, a number of requirements have to be met.
 To install NEXD the user needs the following software installed on his system:
 \begin{itemize}
     \item GNU Make (\url{https://www.gnu.org/software/make/}),
-    \item Fortran compiler (GNU Fortran or Intel Fortran). The software has been tested using the following compiler versions:
+    \item Fortran compiler (GNU Fortran or Intel Fortran). The version 0.3 of this software has been tested using the following compiler versions:
 		\begin{itemize}
-			\item Intel Fortran version 17.0.4 and 19.0.0
-			\item GNU Fortran version 4.9.2, 5.4.0, 6.3.0 and 7.3.0
+			\item Intel Fortran version 19.0.0
+			\item GNU Fortran version 4.9.2, 6.3.0 and 7.4.0
 		\end{itemize}
+	Version 0.2 of NEXD 2D also worked with:
+		\begin{itemize}
+			\item Intel Fortran version 17.0.4
+			\item GNU Fortran version 5.4.0 and 7.3.0
+		\end{itemize}	
     \item LAPACK libraries (\url{http://www.netlib.org/lapack/},
     \item MPI libraries, e.g. OpenMPI, 
     \item METIS (\url{http://glaros.dtc.umn.edu/gkhome/metis/metis/overview}, tested with version 4.0.3) for parallel applications,
@@ -66,9 +71,9 @@ To install the software, follow these steps:
         captionpos=b, 
         label=lis:make2, 
         caption=Exemplary content of the Makefile.,
-        firstnumber = 292, 
-        firstline=292, 
-        lastline=296,
+        firstnumber = 294, 
+        firstline=294, 
+        lastline=298,
         breaklines=true,
         postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}
     ]{source_files/Makefile.txt}
@@ -86,7 +91,7 @@ Below a clean tree for the installation directory with all sub-folders is shown.
 	[doc, label=right:{Contains all files related to the documentation, including the Latex source files}] 
     [simulations
         [2layer\_pml\_att
-            [cubit, label=right:{Contains the files: 2layer\_pml\_att.jou, cubit2dg.py and runcubit.py}]
+            [cubit, label=right:{Contains the files: 2layer\_pml\_att.jou, cubit2dg.py and run\_cubit.py}]
             [data, label=right:{Contains the files: parfile, source and stations}]
             [ref
                [att, label=right:{Contains reference seismograms with attenuation (66 files)}]
@@ -94,15 +99,21 @@ Below a clean tree for the installation directory with all sub-folders is shown.
             ]
         ]
         [example\_linearSlipInterface
-            [cubit, label=right:{Contains the files: lsi.jou, cubit2dg.py and runcubit.py}]
-            [data, label=right:{Contains the files: parfile, source, stations interfaces and fracs}]
+            [cubit, label=right:{Contains the files: lsi.jou, cubit2dg.py and run\_cubit.py}]
+            [data, label=right:{Contains the files: parfile, source, stations, interfaces and fracs}]
             [ref
                 [noPML, label=right:{Contains reference seismograms with PML (60 files)}]
                 [withPML, label=right:{Contains reference seismograms without PML (60 files)}]
             ]
         ]
+        [example\_poro
+            [cubit, label=right:{Contains the files: example\_poro.jou, matpropporo, cubit2dg.py and run\_cubit.py}]
+            [data, label=right:{Contains the files: parfile, source and stations}]
+            [ref, label=right:{Contains reference seismograms (178 Files)}]
+            [tools, label=right:{Contains Matlab Code to calculate velocities and required element size.}]
+        ]
         [lambs
-            [cubit, label=right:{Contains the files: lambs.jou, cubit2dg.py and runcubit.py}]
+            [cubit, label=right:{Contains the files: lambs.jou, cubit2dg.py and run\_cubit.py}]
             [data, label=right:{Contains the files: parfile, source and stations}]
             [ref, label=right:{Contains reference seismograms and a README (13 Files)}]    
         ]

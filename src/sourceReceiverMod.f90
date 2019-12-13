@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -51,6 +51,7 @@ module sourceReceiverMod
         integer :: nrec                                                     !Total Number of receivers
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: recxz => null()  !x-z-values of the receiver
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: recrs => null()  !r-s-values of the receiver
+        real(kind=CUSTOM_REAL), dimension(:), pointer :: rec_ang => null()  !locally defined rotation angle
         integer, dimension(:), pointer :: recelem => null()                 !Element in which the receiver is located
         integer, dimension(:), pointer :: reci => null()                    !Receiver number
         integer, dimension(:), pointer :: recnr => null()
@@ -192,15 +193,23 @@ module sourceReceiverMod
 
         call readIntPar(this%nrec, "nrec", filename, 0, errmsg)
         if (.level.errmsg ==2 ) then; call print(errmsg);stop; endif
-        read(19,*) dummy !This line exists to skip the first line
+        read(19,"(a256)") dummy !This line exists to skip the first line
 
         allocate(this%recxz(2,this%nrec))
         allocate(this%recrs(2,this%nrec))
+        allocate(this%rec_ang(this%nrec))
         allocate(this%recelem(this%nrec))
         allocate(this%reci(this%nrec))
         allocate(this%recnr(this%nrec))
         do irec=1,this%nrec
-            read(19,*) this%recnr(irec),this%recxz(1,irec),this%recxz(2,irec)
+            if (par%global_rec_angle) then
+                read(19,"(a256)") dummy
+                read(dummy,*) this%recnr(irec),this%recxz(1,irec),this%recxz(2,irec)
+                this%rec_ang(irec) = par%rec_angle
+            else
+                read(19,"(a256)") dummy
+                read(dummy,*) this%recnr(irec),this%recxz(1,irec),this%recxz(2,irec),this%rec_ang(irec)
+            end if
             call modelConflict(this%recxz(1, irec), "xrec", minval(coord(1,:)), minval(coord(2,:)), maxval(coord(1,:)), maxval(coord(2,:)), myname, filename, errmsg)
             call modelConflict(this%recxz(2, irec), "zrec", minval(coord(1,:)), minval(coord(2,:)), maxval(coord(1,:)), maxval(coord(2,:)), myname, filename, errmsg)
         end do
@@ -220,6 +229,8 @@ module sourceReceiverMod
                "|              X-value of the reciever: ", this%recxz(1, irec), "                             |"
                 write (*,"(a40, f10.2, a30)")&
                "|              Z-value of the reciever: ", this%recxz(2, irec), "                             |"
+                write (*,"(a40, f10.2, a30)")&
+               "|       rotation angle of the reciever: ", this%rec_ang(irec), "                             |"
                 write (*, "(a80)") "|------------------------------------------------------------------------------|"
 
             enddo
@@ -597,25 +608,30 @@ module sourceReceiverMod
 
     !"--------------------------------------------------------------------------------------"
     ! prepare rec recalculate
-    subroutine prepareRecalcRec(this,nrec,recxz,recnr)
+    subroutine prepareRecalcRec(this,nrec,recxz,recnr,rec_ang)
         type(recVar) :: this
         integer :: nrec
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: recxz
+        real(kind=CUSTOM_REAL), dimension(:), pointer :: rec_ang
         integer, dimension(:), pointer :: recnr
         real(kind=CUSTOM_REAL), dimension(2,nrec), target :: tempxz
+        real(kind=CUSTOM_REAL), dimension(nrec), target :: temp_ang
         integer, dimension(nrec), target :: tempnr
 
         tempxz = recxz
         tempnr = recnr
+        temp_ang= rec_ang
         !produce new pointer to awoid haning pointers
         allocate(this%recxz(2,nrec))
         allocate(this%recrs(2,nrec))
+        allocate(this%rec_ang(nrec))
         allocate(this%recelem(nrec))
         allocate(this%reci(nrec))
         allocate(this%recnr(nrec))
         this%nrec = nrec
         this%recxz = tempxz
         this%recnr = tempnr
+        this%rec_ang = temp_ang
     end subroutine prepareRecalcRec
 
     !"--------------------------------------------------------------------------------------"
@@ -652,6 +668,7 @@ module sourceReceiverMod
         write(27) this%nrec
         write(27) this%recxz
         write(27) this%recrs
+        write(27) this%rec_ang
         write(27) this%recelem
         write(27) this%reci
         write(27) this%recnr
@@ -710,11 +727,13 @@ module sourceReceiverMod
 
         allocate(this%recxz(2,this%nrec))
         allocate(this%recrs(2,this%nrec))
+        allocate(this%rec_ang(this%nrec))
         allocate(this%recelem(this%nrec))
         allocate(this%reci(this%nrec))
         allocate(this%recnr(this%nrec))
         read(27) this%recxz
         read(27) this%recrs
+        read(27) this%rec_ang
         read(27) this%recelem
         read(27) this%reci
         read(27) this%recnr
@@ -745,6 +764,7 @@ module sourceReceiverMod
         type(recVar) :: this
         if (associated(this%recxz)) deallocate(this%recxz)
         if (associated(this%recrs)) deallocate(this%recrs)
+        if (associated(this%rec_ang)) deallocate(this%rec_ang)
         if (associated(this%recelem)) deallocate(this%recelem)
         if (associated(this%reci)) deallocate(this%reci)
         if (associated(this%recnr)) deallocate(this%recnr)

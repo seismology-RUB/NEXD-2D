@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -19,7 +19,7 @@
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
 !-----------------------------------------------------------------------
 program solver
-    ! Program to solve the 2D elastic wave equation with the discontinous galerkin methode in 2D on triangular mesh
+    ! Program to solve the 2D (poro)elastic wave equation with the discontinous galerkin methode in 2D on triangular mesh
     use parameterMod
     use meshMod
     use timeloopMod
@@ -58,6 +58,9 @@ program solver
     ! read Parfile
     call readParfile(par, lsipar, movie, myrank, errmsg)
     if (.level.errmsg == 2) then; call print(errmsg); stop; endif
+
+    call sync_mpi()
+
     if (par%log .and. myrank == 0) then
         write(*,'(a80)') "|------------------------------------------------------------------------------|"
         write(*,'(a80)') "|                             start dg2d mpi solver                            |"

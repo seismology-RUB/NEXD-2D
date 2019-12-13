@@ -1,7 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !   Copyright 2016 Elena Busch (Rice University, USA)
 !
 !   This file is part of NEXD 2D.
@@ -54,6 +55,7 @@ module collectMovieMod
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: sigmaxx
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: sigmazz
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: sigmaxz
+        real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: pressure
         real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: xyzplot
         !real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: tempdata
         integer :: glob_nelem, glob_nglob, glob_ncoord
@@ -180,7 +182,7 @@ module collectMovieMod
             end if
             if (movie%points) then
                 if (par%log) write(*,*) "Creating points displacement files"
-                call generatePointFiles(uplot, "normu", xyzplot, nframe)
+                call generatePointFiles(uplot, "norm_u", xyzplot, nframe)
                 call generatePointFiles(ux, "ux", xyzplot, nframe)
                 call generatePointFiles(uz, "uz", xyzplot, nframe)
             end if
@@ -205,7 +207,7 @@ module collectMovieMod
             end if
             if (movie%points) then
                 if (par%log) write(*,*) "Creating points Velocity files"
-                call generatePointFiles(vplot, "normv", xyzplot, nframe)
+                call generatePointFiles(vplot, "norm_v", xyzplot, nframe)
                 call generatePointFiles(vel_x, "vx", xyzplot, nframe)
                 call generatePointFiles(vel_z, "vz", xyzplot, nframe)
             end if
@@ -213,7 +215,57 @@ module collectMovieMod
             deallocate(vel_x)
             deallocate(vel_z)
         end if
+        
+        if (par%poroelastic .and. (par%fluidn >= 1) .and. movie%v1) then
+            if (par%log) write (*,*) "Creating Fluid (1) Velocity files"
+            allocate(vplot(glob_nglob,nframe))
+            allocate(vel_x(glob_nglob,nframe))
+            allocate(vel_z(glob_nglob,nframe))
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,vplot,"normv1",glob_nglob,nframe,ndata)
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,vel_x,"v1x",glob_nglob,nframe,ndata)
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,vel_z,"v1z",glob_nglob,nframe,ndata)
+            if (movie%trimesh) then
+                if (par%log) write(*,*) "Creating trimesh Fluid (1) Velocity files"
+                call generateTriMeshFiles(db, vplot, "norm_v1", nframe, par%nproc, glob_elem, glob_coord2)
+                call generateTriMeshFiles(db, vel_x, "v1x", nframe, par%nproc, glob_elem, glob_coord2)
+                call generateTriMeshFiles(db, vel_z, "v1z", nframe, par%nproc, glob_elem, glob_coord2)
+            end if
+            if (movie%points) then
+                if (par%log) write(*,*) "Creating points Fluid (1) Velocity files"
+                call generatePointFiles(vplot, "norm_v1", xyzplot, nframe)
+                call generatePointFiles(vel_x, "v1x", xyzplot, nframe)
+                call generatePointFiles(vel_z, "v1z", xyzplot, nframe)
+            end if
+            deallocate(vplot)
+            deallocate(vel_x)
+            deallocate(vel_z)
+        end if
 
+        if (par%poroelastic .and. (par%fluidn == 2) .and. movie%v2) then
+            if (par%log) write (*,*) "Creating Fluid (2) Velocity files"
+            allocate(vplot(glob_nglob,nframe))
+            allocate(vel_x(glob_nglob,nframe))
+            allocate(vel_z(glob_nglob,nframe))
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,vplot,"normv2",glob_nglob,nframe,ndata)
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,vel_x,"v2x",glob_nglob,nframe,ndata)
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,vel_z,"v2z",glob_nglob,nframe,ndata)
+            if (movie%trimesh) then
+                if (par%log) write(*,*) "Creating trimesh Fluid (2) Velocity files"
+                call generateTriMeshFiles(db, vplot, "norm_v2", nframe, par%nproc, glob_elem, glob_coord2)
+                call generateTriMeshFiles(db, vel_x, "v2x", nframe, par%nproc, glob_elem, glob_coord2)
+                call generateTriMeshFiles(db, vel_z, "v2z", nframe, par%nproc, glob_elem, glob_coord2)
+            end if
+            if (movie%points) then
+                if (par%log) write(*,*) "Creating points Fluid (2) Velocity files"
+                call generatePointFiles(vplot, "norm_v2", xyzplot, nframe)
+                call generatePointFiles(vel_x, "v2x", xyzplot, nframe)
+                call generatePointFiles(vel_z, "v2z", xyzplot, nframe)
+            end if
+            deallocate(vplot)
+            deallocate(vel_x)
+            deallocate(vel_z)
+        end if
+        
         if (movie%stress) then
             if (par%log) write (*,*) "Creating Stress files"
             allocate(sigmaxx(glob_nglob,nframe))
@@ -238,7 +290,37 @@ module collectMovieMod
             deallocate(sigmazz)
             deallocate(sigmaxz)
         end if
-
+        
+        if (par%poroelastic .and. (par%fluidn >= 1) .and. movie%p1) then
+            if (par%log) write (*,*) "Creating Fluid (1) Pressure file"
+            allocate(pressure(glob_nglob,nframe))
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,pressure,"p1",glob_nglob,nframe,ndata)
+            if (movie%trimesh) then
+                if (par%log) write(*,*) "Creating trimesh Fluid (1) Pressure file"
+                call generateTriMeshFiles(db, pressure, "p1", nframe, par%nproc, glob_elem, glob_coord2)
+            end if
+            if (movie%points) then
+                if (par%log) write(*,*) "Creating points Fluid (1) Pressure file"
+                call generatePointFiles(pressure, "p1", xyzplot, nframe)
+            end if
+            deallocate(pressure)
+        end if
+        
+        if (par%poroelastic .and. (par%fluidn == 2) .and. movie%p2) then
+            if (par%log) write (*,*) "Creating Fluid (2) Pressure file"
+            allocate(pressure(glob_nglob,nframe))
+            call readplotbin(par%nproc,movie%frame,par%nt,errmsg,pressure,"p2",glob_nglob,nframe,ndata)
+            if (movie%trimesh) then
+                if (par%log) write(*,*) "Creating trimesh Fluid (2) Pressure file"
+                call generateTriMeshFiles(db, pressure, "p2", nframe, par%nproc, glob_elem, glob_coord2)
+            end if
+            if (movie%points) then
+                if (par%log) write(*,*) "Creating points Fluid (2) Pressure file"
+                call generatePointFiles(pressure, "p2", xyzplot, nframe)
+            end if
+            deallocate(pressure)
+        end if
+        
         if (allocated(db)) deallocate(db)
         if (allocated(ndata)) deallocate(ndata)
         if (allocated(ndata2)) deallocate(ndata2)

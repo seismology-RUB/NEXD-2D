@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
-!   Copyright 2015-2018 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -115,8 +115,8 @@ module rhsElasticMod
             nze=mesh%nz(surface*NGLL, element)
 
             !Rotation-Matrix and its inverse
-            T    = getT(nxe,nze)
-            invT = getInvT(nxe,nze)
+            T    = getT(nxe,nze,5)
+            invT = getInvT(nxe,nze,5)
 
             !Get differences of the solutionvectors
             do i = 1, NGLL

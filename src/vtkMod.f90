@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2018 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -26,8 +26,8 @@ module vtkMod
 
     contains
 
-    subroutine writeVtkTetraMeshIntdata(filename, elem, coord, data)
-        character(len=*) :: filename
+    subroutine writeVtkTetraMeshIntdata(filename, elem, coord, data, fieldname)
+        character(len=*) :: filename, fieldname
         real(kind=CUSTOM_REAL), dimension(:,:) :: coord
         integer, dimension(:) :: data
         integer, dimension(:,:) :: elem
@@ -59,7 +59,7 @@ module vtkMod
         write(19,*) ""
 
         write(19,'(a,i12)') "CELL_DATA ",nelem
-        write(19,'(a)') "SCALARS data integer"
+        write(19,'(a,a,a)') "SCALARS ", fieldname, " integer"
         write(19,'(a)') "LOOKUP_TABLE default"
         do i = 1,nelem
             write(19,*) data(i)
@@ -68,8 +68,8 @@ module vtkMod
         close(19)
     end subroutine writeVtkTetraMeshIntdata
 
-    subroutine writeVtkTetraMeshRealdata(filename, elem, coord, data)
-        character(len=*) :: filename
+    subroutine writeVtkTetraMeshRealdata(filename, elem, coord, data, fieldname)
+        character(len=*) :: filename, fieldname
         real(kind=CUSTOM_REAL), dimension(:,:) :: coord
         real(kind=CUSTOM_REAL), dimension(:) :: data
         integer, dimension(:,:) :: elem
@@ -101,7 +101,7 @@ module vtkMod
         write(19,*) ""
 
         write(19,'(a,i12)') "CELL_DATA ",nelem
-        write(19,'(a)') "SCALARS data float"
+        write(19,'(a,a,a)') "SCALARS ", fieldname, " float"
         write(19,'(a)') "LOOKUP_TABLE default"
         do i = 1,nelem
             write(19,*) data(i)
@@ -110,8 +110,8 @@ module vtkMod
         close(19)
     end subroutine writeVtkTetraMeshRealdata
 
-    subroutine writeVtkTriMeshRealdata(filename, elem, coord, data)
-        character(len=*) :: filename
+    subroutine writeVtkTriMeshRealdata(filename, elem, coord, data, fieldname)
+        character(len=*) :: filename, fieldname
         real(kind=CUSTOM_REAL), dimension(:,:) :: coord
         real(kind=CUSTOM_REAL), dimension(:) :: data
         integer, dimension(:,:) :: elem
@@ -145,7 +145,7 @@ module vtkMod
         write(19,*) ""
 
         write(19,'(a,i12)') "CELL_DATA ",nelem
-        write(19,'(a)') "SCALARS data float"
+        write(19,'(a,a,a)') "SCALARS ", fieldname, " float"
         write(19,'(a)') "LOOKUP_TABLE default"
         do i = 1,nelem
             write(19,*) data(i)
@@ -154,8 +154,8 @@ module vtkMod
         close(19)
     end subroutine writeVtkTriMeshRealdata
 
-    subroutine writeVtkTriMeshRealdata2D(filename, elem, coord, data)
-        character(len=*) :: filename
+    subroutine writeVtkTriMeshRealdata2D(filename, elem, coord, data, fieldname)
+        character(len=*) :: filename, fieldname
         real(kind=CUSTOM_REAL), dimension(:,:) :: coord
         real(kind=CUSTOM_REAL), dimension(:) :: data
         integer, dimension(:,:) :: elem
@@ -189,7 +189,7 @@ module vtkMod
         write(19,*) ""
 
         write(19,'(a,i12)') "CELL_DATA ",nelem
-        write(19,'(a)') "SCALARS data float"
+        write(19,'(a,a,a)') "SCALARS ", fieldname, " float"
         write(19,'(a)') "LOOKUP_TABLE default"
         do i = 1,nelem
             write(19,*) data(i)
@@ -224,8 +224,8 @@ module vtkMod
         close(19)
     end subroutine writeVtkNodes
 
-    subroutine writeVtkNodesRealData(filename, x,y,z,data)
-        character(len=*) :: filename
+    subroutine writeVtkNodesRealData(filename, x,y,z,data, fieldname)
+        character(len=*) :: filename, fieldname
         real(kind=CUSTOM_REAL), dimension(:) ::x,y,z,data
         integer :: n
         integer :: i
@@ -247,8 +247,8 @@ module vtkMod
             write(19,'(5i12)') 3 ,i-1,i-1,i-1
         end do
         write(19,'(a,i12)') "POINT_DATA ",n
-        write(19,'(a)') "SCALARS data float"
-        write(19,'(a)') "LOOKUP_TABLE data"
+        write(19,'(a,a,a)') "SCALARS ", fieldname, " float"
+        write(19,'(a)') "LOOKUP_TABLE default"
         do i = 1,n
             write(19,*) data(i)
         enddo
@@ -256,8 +256,8 @@ module vtkMod
         close(19)
     end subroutine writeVtkNodesRealData
 
-    subroutine writeVtkNodesRealDataBin(filename, x,y,z,data)
-        character(len=*) :: filename
+    subroutine writeVtkNodesRealDataBin(filename, x,y,z,data, fieldname)
+        character(len=*) :: filename, fieldname
         real(kind=CUSTOM_REAL), dimension(:) ::x,y,z,data
         integer :: n
         integer :: i
@@ -279,8 +279,8 @@ module vtkMod
            write(19) 3 ,i-1,i-1,i-1
         end do
         write(19) "POINT_DATA ",n
-        write(19) "SCALARS data float"
-        write(19) "LOOKUP_TABLE data"
+        write(19) "SCALARS ", fieldname, " float"
+        write(19) "LOOKUP_TABLE default"
         do i = 1,n
             write(19) data(i)
         enddo

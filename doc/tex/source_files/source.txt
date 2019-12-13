@@ -2,19 +2,19 @@
 # Sources should be added sequentially. Otherwise problems will occur when reading the file
 
 # Number of sources
-nsrc        = 1         # Number of sources
+nsrc        = 1         # Total number of sources
 
 # Source 1 - Parameters
-source      = 1
-xsource     = 25.000000 # x-value of the source
-zsource     = 10.000000 # z-value of the source
-delay       = 0.0       # time delay for the start of the source influence
+source      = 1         # Running Number of the sources
+xsource     = 25.       # x-value of the source
+zsource     = 10.       # z-value of the source
+delay       = 0.0       # time delay for the source
 sourcetype  = 0         # Type of source: 1 = Moment tensor, 0 = single force
 stf         = 2         # Type of source-time-function: 1 = gauss, 2 = ricker, 3 = sin^3, 4 = external
 extwavelet  = data/1MHz0.5in_clean.txt  #file with external wavelet; required if stf = 4
-f0          = 400.0     # center frequency of stf
+f0          = 400.      # center frequency of stf
 factor      = 1e6       # factor of the stf
-angle_force = 0.000000  # angle of the force action in the media
+angle_force = 00.       # angle of the force action in the media
 Mxx         = 0.0       # Momenttensor Mxx
 Mzz         = 0.0       # Momenttensor Mzz
 Mxz         = 1.0       # Momenttensor Mxz

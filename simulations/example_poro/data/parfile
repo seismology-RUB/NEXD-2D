@@ -1,0 +1,84 @@
+# Parameter file for 2D NDG software
+
+# Title of the simulation
+title                   = example_poro
+
+# Choose the way in which the flux is calculated 
+fluxtype                = 1                 # "0" Pre-calculated flux (only for elastic simulations), "1" existing methods
+
+# Convenience Parameters
+log                     = .true.            # "true" if log should be displayed on screen, otherwise "false"
+debug                   = .true.            # Parameter to enable certain output for debugging purposes
+
+# Number of Processors
+nproc                   = 40                # depending on setup (currently max is 96)
+
+# Model parameters
+externalfilename        = cold_flach2.grd   # File containing the external model
+extvel                  = .false.           # "true" if external velocity model should be loaded, otherwise "false"
+
+# Parameters regarding seismograms
+subsampling_factor      = 1                 # reduce sampling rate of seismograms by this factor to create smaller but less accurate files
+autoshift               = .true.            # Corrects for the "width" of the used wavelet. For a Ricker or Gaussian the maximum will be at t=0. If set to .false plott0 is used instead.
+plott0                  = 0.                # Offset for the seismogram. Default is 0.
+div                     = .false.           # "true" if the radial component of the seimogram is to be calculated, otherwise false
+curl                    = .false.           # "true" if the tangential component of the seimogram is to be calculated, otherwise false
+
+# Fracture parameters
+lsi                     = .false.           # "true" if the fracture influence is to be calculated, otherwise "false"  
+normal                  = .true.            # Jump for P-Waves
+tangential              = .true.            # Jump for SV-Waves
+
+# Movie parameters
+movie                   = .true.            # if "true" the a movie is created, otherwise "false"
+frame                   = 100               # Number of time steps for each frame of the movie
+save_movie_trimesh      = .true.            # Create files with average in each element
+save_movie_points       = .true.            # Create files with data for each point
+save_movie_displacement = .true.            # Plot displacement field
+save_movie_velocity     = .true.            # Plot velocity field
+save_movie_stress       = .true.            # Plot stress field
+save_movie_p1           = .true.            # Plot pressure of the first fluid
+save_movie_v1           = .true.            # Plot velocity of the first fluid
+save_movie_p2           = .false.           # Plot pressure of the second fluid
+save_movie_v2           = .false.           # Plot velocity of the second fluid
+
+# Parameters for Timeintegration
+timeint                 = 2                 # which timeintegration?  1:euler 2:rk2 (TVD) 3:rk3 (TVD) 4:rk4 (LSERK)
+autont                  = .false.           # automatic calculation of number of timesteps based on dt and t_total (if .true. t_total will be used, if .false. nt will be used)
+nt                      = 7000              # Number of timesteps
+t_total                 = 1.53              # Total simulated time (t_toal = nt*dt)
+autodt                  = .true.            # automatic calculation of dt
+dt                      = 0.0               # if autodt = .false. choose dt manually
+cfl                     = 0.2               # cfl value for dt
+simt0                   = 0.                # starting time of simulation
+
+# pmlparameters
+set_pml                 = .false.           # if "true" pml are set else absorbing boundary conditions are set
+pml_delta               = 5.0               # pml thickness
+pml_rc                  = 0.001             # pml reclection coff
+pml_kmax                = 1.0               # pml kmax
+pml_afac                = 1.0               # factor for amax
+use_trigger             = .false.           # use sta_lta trigger for energy monitoring
+avg_window1             = 10                # lta window
+avg_window2             = 2                 # sta window
+sta_lta_trigger         = 0.1               # threshold
+
+# Poroelasticity
+poroelastic             = .true.            # Materials are poroelastic if .true. otherwise elastic
+fluidn                  = 1                 # Number of immiscible fluids (either 1, i.e. saturated, or 2, i.e. unsaturated/saturated by 2 fluids)
+calculate_tortuosity    = .false.           # Tortuosity is calculated according to Berryman (1980): T = 1+r(1-1/phi) (note, that if this is set to .true., in the file porousmaterial r has to be specified instead of T!)
+extmatprop              = .true.            # if .true. the material file specified at 'external_material_name' will be used, else, matprop, created by e.g. 'cubit' will be used.
+extmatpropfilename      = cubit/matpropporo # name of external material file
+
+# Attenuation
+attenuation             = .false.           # "true" to enable attenuation otherwise .false.
+f0_att                  = 43.5              # Frequency where the model parameters are applied
+f_max_att               = 43.5              # maximum of frequency band for anelastic modulus
+att_factor              = 100.              # factor to define minimum frequency, f_min_att=f_max_att/att_factor
+
+# Sources
+shift_sources           = .true.            # if .true. then the sources will be shifted by 1.2/f0, otherwise the maximum of the wavelet it at t = simt0 + delay (see source parameter file).
+
+# Receiver
+global_rec_angle        = .true.            # If .true. the angle given below (rec_angle) will be used for all receivers, otherwise the angle has to be provided for each receiver indepentently in the receiver file.
+rec_angle               = 0.0               # rotate receivers about degree

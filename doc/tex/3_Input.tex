@@ -60,12 +60,13 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
     label=lis:parfile2,
     firstnumber = 20,
     firstline = 20,
-    lastline = 25,
+    lastline = 26,
     caption=Parameters regarding seismograms.,
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
     ]{source_files/parfile.txt} 
     		\begin{itemize}
+    			\item \textbf{subsampling\_factor}: Can be used to reduce the sampling rate of the seismograms, where $\mathrm{sampling\_rate}=\mathrm{subsampling\_factor} \cdot \mathrm{dt}$.
     			\item \textbf{autoshift}: Corrects for the "width" of the used wavelet. For a Ricker or Gaussian the maximum will be at t=0. If set to .false. plott0 is used instead.
     			\item \textbf{autodt}: Offset for the seismogram.
     			\item \textbf{div}: "true" if the radial component of the seimogram is to be calculated, otherwise "false".
@@ -96,9 +97,9 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
     float=ht, 
     captionpos=b, 
     label=lis:parfile4,
-    firstnumber = 31,
-    firstline = 31,
-    lastline = 39,
+    firstnumber = 32,
+    firstline = 32,
+    lastline = 44,
     caption= Movie parameters.,
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
@@ -111,6 +112,10 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
     			\item \textbf{save\_movie\_displacement}: Enable to plot the displacement field.
     			\item \textbf{save\_movie\_velocity}: Enable to plot the particle velocity field.
     			\item \textbf{save\_movie\_stress}: Enable to plot the stress field.
+    			\item \textbf{save\_movie\_p1}: Enable to plot the pressure field of the first fluid (only for poroelasticity).
+    			\item \textbf{save\_movie\_v1}: Enable to plot the particle velocity field of the first fluid (only for poroelasticity).
+    			\item \textbf{save\_movie\_p2}: Enable to plot the pressure field of the second fluid (only for poroelasticity).
+    			\item \textbf{save\_movie\_v2}: Enable to plot the particle velocity field of the first fluid (only for poroelasticity).
     		\end{itemize}
 		\subsubsection{Parameters regarding time integration}
 			This part of the parfile is displayed in listing \ref{lis:parfile5}. These parameters influence the selection of the method that is used for time integration, the number of time steps and the selection of the time step. 
@@ -118,9 +123,9 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
     float=ht, 
     captionpos=b, 
     label=lis:parfile5,
-    firstnumber = 40,
-    firstline = 40,
-    lastline = 46,
+    firstnumber = 45,
+    firstline = 45,
+    lastline = 54,
     caption= Parameters regarding time integration,
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
@@ -134,10 +139,13 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
   				\item low-storage five-stage fourth order Runge-Kutta, rk4 (LSERK).
   			\end{enumerate}
   			Enter the number to select the appropriate method.
-  			\item \textbf{nt}: Select the number of time steps for the simulation.
+  			\item \textbf{autont}: Can be used to automatically calculate the number of timesteps to reach the time specified in t\_total.
+  			\item \textbf{nt}: Select the number of time steps for the simulation. Not used if autont is true.
+  			\item \textbf{t\_total}: Select the total simulated time. Not used if autont is false.
   			\item \textbf{autodt}: Automatically calculate the time step based on the Courant-Friedrichs-Lewy (CFL) criterion.
   			\item \textbf{dt}: Specify dt different from the automatic one. This parameter is ignored as long as autodt is set to "true". 
-  			\item \textbf{cfl}: Parameter for the CFL stability criterion. Must be 0 < cfl < 1. %Recommended values are: rk2, cfl = 0.4; rk3, cfl = ?; rk4, cfl = 0.7. 
+  			\item \textbf{cfl}: Parameter for the CFL stability criterion. Must be 0 < cfl < 1. %Recommended values are: rk2, cfl = 0.4; rk3, cfl = ?; rk4, cfl = 0.7.
+  			\item \textbf{simt0}: Specify the starting time of the simulation.
     	\end{itemize}
 		\subsubsection{Parameters regarding PML}
 			This part of the parfile is displayed in listing \ref{lis:parfile6}. These parameters influence the selection of the method that is used for time integration, the number of time steps and the selection of the time step. 
@@ -145,9 +153,9 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
     float=ht, 
     captionpos=b, 
     label=lis:parfile6,
-    firstnumber = 47,
-    firstline = 47,
-    lastline = 56,
+    firstnumber = 55,
+    firstline = 55,
+    lastline = 65,
     caption= Parameters regarding PML,
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
@@ -174,6 +182,27 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
 				\item \textbf{avg\_window2}: Size of the window to determine the short term average (STA).
 				\item \textbf{sta\_lta\_trigger}: Threshold for the STA-LTA trigger. Values above this threshold will lead to disabling the PML.
 			\end{itemize}
+		
+    	\subsubsection{Parameters regarding poroelasticity}
+			This part of the parfile is displayed in listing \ref{lis:parfile9}. If this is enabeld, the materials are handled as poroelastic media. For a detailed description on the theory behind these calculations, the interested user is referred to \cite{Boxberg.2019}.
+			\lstinputlisting[
+    float=ht, 
+    captionpos=b, 
+    label=lis:parfile9,
+    firstnumber = 66,
+    firstline = 66,
+    lastline = 72,
+    caption= Parameters regarding poroelasticity,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
+    ]{source_files/parfile.txt}
+    \begin{itemize}
+    	\item \textbf{poroelastic}: Enable poroelastic media. This requires a special choice of material properties (see section \ref{subsec:matprop}).
+    	\item \textbf{fluidn}: Number of immiscible fluids (1 or 2).
+    	\item \textbf{calculate\_tortuosity}: If true, the material parameter tortuosity will be calculated according to $T = 1+r\left(1-\frac{1}{\varphi}\right)$, where $\varphi$ is the porosity and $r$ is a geometrical factor that is 0.5 for spheres \citep[see][for more information]{Boxberg.2019}.
+    	\item \textbf{extmatprop}: If true, the material file specified at external\_material\_name will be used, else, matprop will be used.
+    	\item \textbf{extmatpropfilename}: Path and filename of the external material property file.
+    \end{itemize}		
 			
     	\subsubsection{Parameters regarding attenuation}
 			This part of the parfile is displayed in listing \ref{lis:parfile7}. If enabled, these parameters influence the calculation of the attenuation.
@@ -181,9 +210,9 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
     float=ht, 
     captionpos=b, 
     label=lis:parfile7,
-    firstnumber = 58,
-    firstline = 58,
-    lastline = 62,
+    firstnumber = 73,
+    firstline = 73,
+    lastline = 78,
     caption= Parameters regarding attenuation,
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
@@ -194,15 +223,31 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
 		\item \textbf{f\_max\_att}: Defines the upper end of the frequency range for the attenuation.
 		\item \textbf{att\_factor}: Factor defining the lower end of frequency range for the attenuation by f\_min\_att = f\_max\_att / att\_factor.
     \end{itemize}
+
+		\subsubsection{Global parameter for the sources}
+			\lstinputlisting[
+    float=ht, 
+    captionpos=b, 
+    label=lis:parfile10,
+    firstnumber = 79,
+    firstline = 79,
+    lastline = 81,
+    caption= Sources,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
+    ]{source_files/parfile.txt}
+    	\begin{itemize}
+    	 \item \textbf{shift\_sources}: If true, the sources will be shifted by 1.2/f0, so that the maximum is at t = simt0 + delay + 1.2/f0, otherwise the maximum of the wavelet is at t = simt0 + delay (see section \ref{subsec:source}).
+    	\end{itemize}
     
 		\subsubsection{Global parameter for the stations}
 			\lstinputlisting[
     float=ht, 
     captionpos=b, 
     label=lis:parfile8,
-    firstnumber = 1,
-    firstline = 63,
-    lastline = 65,
+    firstnumber = 82,
+    firstline = 82,
+    lastline = 85,
     caption= Receiver angle,
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
@@ -334,23 +379,86 @@ If Trelis is not used, the user might have to write a script similar to "cubit2d
     float=ht, 
     captionpos=b, 
     label=lis:matprop,
-    caption=Entries for a matprop file,
+    caption=Entries for a matprop file with (visco-)elastic materials,
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
-    ]{source_files/matprop.txt}
-    		This file lists the properties of the materials used in the model. The first entry lists the total number of materials. The subsequent lines contain the following values (from left to right):
+    ]{source_files/matpropElastic.txt}
+    		The file in listing \ref{lis:matprop} lists the properties of the (visco-)elastic materials used in the model and the file in listing \ref{lis:matpropPoroelastic} lists the properties of the poroelastic materials. The first entry lists the total number of materials. 
+    		The subsequent lines contain the following values for (visco-)elastic materials (from left to right):
     		\begin{itemize}
     			\item Block number (Cubit block)
     			\item Index identifying the whether the material is an elastic material or not.\footnote{Currently the value is always 1 as an elastic material is always used. This may change in future releases.}
-    			\item Compressional (P-) wave velocity ($v_P$).
-    			\item Shear (S-) wave velocity ($v_S$).
+    			\item Compressional (P-) wave velocity ($v_\mathrm{P}$).
+    			\item Shear (S-) wave velocity ($v_\mathrm{S}$).
     			\item Density ($\rho$).
-    			\item Quality factor regarding P-waves ($Q_P$).
-    			\item Quality factor regarding S-waves ($Q_S$). 
+    			\item Quality factor regarding P-waves ($Q_\mathrm{P}$).
+    			\item Quality factor regarding S-waves ($Q_\mathrm{S}$). 
     		\end{itemize}
     		The latter two values are related to anelastic calculations and influence attenuation. If attenuation is not selected in the parfile, these values will be irrelevant. If attenuation is selected and a quasi-elastic material is to be part of the simulation, these variables will need to have a high value ($Q = \infty$ for an elastic material). A sample file for an elastic medium is displayed in code listing \ref{lis:matprop}. \\
 
     		\fcolorbox{red}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Attention}: This file contains two materials as PML are included in the mesh. If PML are included in the simulation, they are represented by an individual material. See appendix~\ref{chap:model} for more details}}
+    		
+		    \lstinputlisting[
+    float=ht, 
+    captionpos=b, 
+    label=lis:matpropPoroelastic,
+    caption=Entries for a matprop file with poroelastic materials,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
+    ]{source_files/matpropPoroelastic.txt}
+		    The subsequent lines contain the values of material parameters, the first number defines which model is used. The used parameters are: 
+		    \begin{itemize}
+		    \item Block number (Cubit block)
+		    \item rhos = density solid
+		    \item lambda\^{}u = first Laméparameter (undrained)
+		    \item K\^{}d = bulk modulus of skeleton (drained)
+		    \item mu = shear modulus
+		    \item phi = porosity
+		    \item kappa = permeability
+		    \item b = biot coefficient
+		    \item 1/T = inverse tortuosity (Note, that this is replaced by r, if 1/T is calculated! See \ref{subsec:parfile})
+		    \item 1/N = inverse of biot modulus
+		    \item Ks = bulk modulus of solid grain material
+		    \item rho1 = density fluid 1
+		    \item S1 = saturation fluid 1
+		    \item K1 = bulk modulus fluid 1
+		    \item ny1 = viscosity fluid 1 (this is the wetting fluid)
+		    \item rho2 = density fluid 2
+		    \item S2 = saturation fluid 2
+		    \item K2 = bulk modulus fluid 2
+		    \item ny2 = viscosity fluid 2 (this is the non-wetting fluid)
+		    \item fitting\_n, fitting\_chi = fitting parameters for van Genuchten model n, chi \citep[see][]{Boxberg.2019}
+		    \item p\_b = bubbling pressure
+		    \item lambda\_BC = fitting parameter for Brooks \& Corey model, see \citep{Boxberg.2019})
+		    \item A = capillary pressure coefficient for Douglas Jr. et al. model, see \citep{Boxberg.2019})
+		    \item Sr1 = residual saturation fluid 1
+		    \item Sr2 = residual saturation fluid 2
+		    \end{itemize} 
+		    The following nine different combinations are allowed:
+			\begin{itemize}	    
+\item Block number, 1, rhos, lambda\^{}u, my, phi, kappa, b,  1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, fitting\_n, fitting\_chi, Sr1, Sr2
+\item Block number, 2, rhos, lambda\^{}u, my, phi, kappa, b,  1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, p\_b,       lambda\_BC,   Sr1, Sr2
+\item Block number, 3, rhos, K\^{}d,      my, phi, kappa, 0., 1/T, Ks,  rho1, S1, K1, ny1, rho2, S2, K2, ny2, fitting\_n, fitting\_chi, Sr1, Sr2
+\item Block number, 4, rhos, K\^{}d,      my, phi, kappa, 0., 1/T, Ks,  rho1, S1, K1, ny1, rho2, S2, K2, ny2, p\_b,       lambda\_BC,   Sr1, Sr2
+\item Block number, 5, rhos, K\^{}d,      my, phi, kappa, 0., 1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, fitting\_n, fitting\_chi, Sr1, Sr2
+\item Block number, 6, rhos, K\^{}d,      my, phi, kappa, 0., 1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, p\_b,       lambda\_BC,   Sr1, Sr2
+\item Block number, 7, rhos, lambda\^{}u, my, phi, kappa, b,  1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, A,         0.,          Sr1, Sr2
+\item Block number, 8, rhos, K\^{}d,      my, phi, kappa, 0., 1/T, Ks,  rho1, S1, K1, ny1, rho2, S2, K2, ny2, A,         0.,          Sr1, Sr2
+\item Block number, 9, rhos, K\^{}d,      my, phi, kappa, 0., 1/T, 1/N, rho1, S1, K1, ny1, rho2, S2, K2, ny2, A,         0.,          Sr1, Sr2
+\end{itemize} 
+		  
+		  \lstinputlisting[
+    float=htp, 
+    captionpos=b, 
+    label=lis:matpropporo,
+    caption=Structure of a matpropporo file,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
+    ]{source_files/matpropporo.txt}
+    		  Instead of creating this material file, a matpropporo file can be specified (necessary for the Matlab code), which looks slightly different (see \ref{lis:matpropporo}).
+
+    
+   
     	\subsection{mat}
     	\label{subsec:mat}
     		\lstinputlisting[

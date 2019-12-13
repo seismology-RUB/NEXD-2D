@@ -74,6 +74,8 @@ else ifeq ($(F95),mpif90)
 	#                        problem to correctly work with constants.h.
 	# recommended flags for developers:
 #	FFLAGS = -Og -J$(moduledir) -fimplicit-none -ffixed-line-length-none -ffree-line-length-none -fbounds-check -fbacktrace -Wall -Wpedantic -Wextra
+	# recommended flags for profiling (CP CP):
+#	FFLAGS = -O3 -J$(moduledir) -fimplicit-none -ffixed-line-length-none -ffree-line-length-none -funroll-all-loops -pg -g -no-pie
 	# recommended flags for users:
 	FFLAGS = -O3 -J$(moduledir) -fimplicit-none -ffixed-line-length-none -ffree-line-length-none -funroll-all-loops
 else ifeq ($(F95),mpiifort)
@@ -276,7 +278,7 @@ DEPDIRS = $(srcdir)
 	$(F95) -c $(FFLAGS) $< -o $(obsdir)/$@
 %.o: %.f
 	$(F95) -c $(FFLAGS) -fimplicit-none -ffixed-line-length-132 $< -o $(obsdir)/$@
-%.o: %.c    
+%.o: %.c
 	gcc -c $(CFLAGS) $< -o $(obsdir)/$@
 #--------------------------------------------------------------
 #  Object string for linking:
