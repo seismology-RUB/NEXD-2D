@@ -1,0 +1,5 @@
+How to run a simulation:
+1) Create a mesh with Gmsh (mesh/example_poro.geo) or Trelis/Cubit (mesh/example_poro.jou)
+2) Prepare mesh for dg2d using the python script (../../tools/scripts/gmsh2dg2d.py or mesh/run_cubit.py)
+3) Perform preprocessing (process.sh)
+4) Run solver using script (run.csh)

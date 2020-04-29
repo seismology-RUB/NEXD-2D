@@ -1,5 +1,6 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -66,9 +67,9 @@ program dg2d
 
     ! plot mesh
     write(*,*) "plot mesh"
-    call triangulation_order3_plot ( "out/mesh.ps", mesh%ncoord, dble(mesh%coord), mesh%nelem, mesh%elem, 2, 2 )
-    filename = "out/pointsmesh.txt"
-    call plotPoints2d(mesh%vx,mesh%vz,filename)
+    call triangulation_order3_plot ( trim(outpath)//"mesh.ps", mesh%ncoord, dble(mesh%coord), mesh%nelem, mesh%elem, 2, 2 )
+    filename = "pointsmesh.txt"
+    call plotPoints2d(mesh%vx,mesh%vz,trim(outpath)//filename)
 
     ! start timeloop
     call timeloop2d(par,mesh,src,rec)
@@ -81,4 +82,4 @@ program dg2d
         write(*,*) "end dg2d"
         write(*,*) "--------------------------------------------------------------------------------------"
     end if
-end program dg2d
+end program d

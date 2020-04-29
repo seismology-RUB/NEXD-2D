@@ -1,0 +1,13 @@
+upperfreq	= 50		! cutoff frequency for low-pass filtering
+inv_type	= 3		! Method to calculate search direction, 1: SD, 2: CG, 3: BFGS
+step_1		= 0.0		! Three test step lengths at the start of the search for optimal step length
+step_2		= 0.5
+step_3		= 1.5
+min_step	= 1.E-6		! Minimum step length
+max_step	= 1.E-1		! Maximum step length
+min_step_BFGS	= 1.E-4		! Minimum step length for BFGS calculations
+max_step_BFGS	= 10		! Maximum step length for BFGS calculations
+min_vp		= 100.		! Minimum vp value that can be reached during inversion
+max_vp		= 6000.		! Maximum vp value that can be reached during inversion
+min_vs		= 50.		! Minimum vs value that can be reached during inversion
+max_vs		= 3000.		! Maximum vs value that can be reached during inversion

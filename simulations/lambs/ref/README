@@ -1,12 +1,8 @@
 analytical solution:
 Ux_file_ascii_rec1
-Ux_file_ascii_rec2
 Uz_file_ascii_rec1
-Uz_file_ascii_rec2
 Vx_file_ascii_rec1
-Vx_file_ascii_rec2
 Vz_file_ascii_rec1
-Vz_file_ascii_rec2
 
 NEXD
 seismo.x.0000001.sdu
@@ -15,15 +11,7 @@ seismo.x.0000001.sda
 seismo.z.0000001.sdu
 seismo.z.0000001.sdv
 seismo.z.0000001.sda
-seismo.x.0000002.sdu
-seismo.x.0000002.sdv
-seismo.x.0000002.sda
-seismo.z.0000002.sdu
-seismo.z.0000002.sdv
-seismo.z.0000002.sda
 
 SPECFEM
 S0001.AA.BXX.semd
 S0001.AA.BXZ.semd
-S0002.AA.BXX.semd
-S0002.AA.BXZ.semd

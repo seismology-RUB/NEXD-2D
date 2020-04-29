@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -37,16 +37,8 @@ module slipInterfaceMod
     !Type that contains the specifications of the interfaces. Information from the "Interfaces" file is stored here.
     type :: interface_spec
         character(len=10) :: type                                   !Interface types: Choices are elastic
-        real(kind=custom_real) :: e_mod                             !Youngs-Modulus
-        real(kind=custom_real) :: h                                 !Width
-        real(kind=custom_real) :: vp                                !P-wave velocity
-        real(kind=custom_real) :: vs                                !S-Wave velocity
-        real(kind=custom_real) :: rho                               !Density
-        real(kind=custom_real) :: emod                              !Young's Modulus
-        real(kind=custom_real) :: C_n                               !Relation between the Elastic modulus of the crack and the reference Modulus. (Normal to the crack)
-        real(kind=custom_real) :: C_t                               !Relation between the Elastic modulus of the crack and the reference Modulus. (tangentical to the crack)
-        real(kind=custom_real) :: eta_vp                            !Compliance (P-Wave)
-        real(kind=custom_real) :: eta_vs                            !Compliance (S-Wave)
+        real(kind=custom_real) :: nu_n                            !Compliance (P-Wave)
+        real(kind=custom_real) :: nu_t                            !Compliance (S-Wave)
     end type
 
     !Type that contains the information neede to calculate the activity of each interface
@@ -118,7 +110,7 @@ module slipInterfaceMod
         type(lsi_location), dimension(:), allocatable :: lsi_loc
         !local
         character(len=27) :: myname = 'readLSILocation'
-        real(kind = CUSTOM_REAL) :: pml_minX, pml_minZ, pml_maxX, pml_maxZ
+        real(kind=CUSTOM_REAL) :: pml_minX, pml_minZ, pml_maxX, pml_maxZ
         integer :: nlsi
         integer :: i
         integer :: maxprop                                          ! This is a dummy variable to read the maximum number
@@ -178,6 +170,7 @@ module slipInterfaceMod
         character(len=27) :: myname = 'readSlipInterfaceSpec'
         integer :: nslip
         integer :: i
+        real(kind=custom_real), dimension(2) :: tmp
 
         call addTrace(errmsg,myname)
 
@@ -186,11 +179,11 @@ module slipInterfaceMod
         allocate (lsi_spec(nslip))
 
         do i = 1, nslip
-            read(1,*) lsi_spec(i)%type,lsi_spec(i)%h,lsi_spec(i)%emod,lsi_spec(i)%C_n,lsi_spec(i)%C_t
+            read(1,*) lsi_spec(i)%type, tmp(1), tmp(2)
             select case(trim(lsi_spec(i)%type))
                 case ("elastic")
-                    lsi_spec(i)%eta_vp = (2*lsi_spec(i)%C_n*lsi_spec(i)%h)/lsi_spec(i)%emod
-                    lsi_spec(i)%eta_vs = (2*lsi_spec(i)%C_t*lsi_spec(i)%h)/lsi_spec(i)%emod
+                    lsi_spec(i)%nu_n = tmp(1)
+                    lsi_spec(i)%nu_t = tmp(2)
                 case default
                     call add(errmsg,2,"No accepted interface-type entered.",myname, "data/interfaces")
                     call print(errmsg); return

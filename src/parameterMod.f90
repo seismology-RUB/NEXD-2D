@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -31,10 +31,8 @@ module parameterMod
 
     type :: parameterVar
         !private
-        sequence
         character(len=80) :: title              !Title of the simulation
         logical :: log = .true.                 !Write information onto screen
-        logical :: debug                        !Parameter to enable certain output for debugging purposes
 
         !external model
         character(len=255) :: externalfilename  !File containing the external model
@@ -92,8 +90,16 @@ module parameterMod
 
         !Flux
         integer :: fluxtype         !Specifies in which way the flux is calculated.
-    end type parameterVar
 
+        !Inversion
+        integer :: adj_nstep        ! Defines the sampling rate of the adjoint wave field
+        logical :: inversion        ! Flag to use inversion mode or not
+        logical :: time_shift       ! Flag to shift seismograms to prepare for filter
+        integer :: inversionSteps   ! Number of inversion steps
+        real(kind=CUSTOM_REAL) :: maskradius    ! radius of gradient mask in percent of the longest edge
+        real(kind=CUSTOM_REAL) :: lowfreq       ! Minimum frequency for the inversion
+        real(kind=CUSTOM_REAL) :: highfreq      ! Maximum frequency for the inversion
+    end type parameterVar
 
     type movie_parameter
         !A series of switches to select which files are created for plotting
@@ -175,7 +181,6 @@ module parameterMod
             call readIntPar(this%nt, "nt", filename, 0, errmsg)
         end if
         call readLogicalPar(this%autodt, "autodt", filename, 0, errmsg)
-        call readLogicalPar(this%debug, "debug", filename, 0, errmsg)
         call readLogicalPar(this%use_trigger, "use_trigger", filename, 0, errmsg)
         call readLogicalPar(this%poroelastic, "poroelastic", filename, 0, errmsg)
         if (this%poroelastic) then
@@ -205,6 +210,14 @@ module parameterMod
             call readFloatPar(this%plott0,"plott0", filename, 0, errmsg)
         end if
         call readLogicalPar(this%shift_sources, "shift_sources", filename, 0, errmsg)
+        call readLogicalPar(this%inversion, "inversion", filename, 0, errmsg)
+        call readLogicalPar(this%time_shift, "time_shift", filename, 0, errmsg)
+        if (this%inversion) then
+            call readIntPar(this%inversionSteps, "inv_steps", filename, 0, errmsg)
+            call readfloatPar(this%maskradius, "mask_radius", filename, 0, errmsg)
+            call readfloatPar(this%highfreq, "highfreq", filename, 0, errmsg)
+        endif
+        call readfloatPar(this%lowfreq, "lowfreq", filename, 0, errmsg)
         close(19)
 
         !test if certain parameters have been read/entered correctly
@@ -224,7 +237,6 @@ module parameterMod
             write (*, "(a80)") "|                               Basic parameters                               |"
             write (*, "(a80)") "|------------------------------------------------------------------------------|"
             write (*,"(a40, l10, a30)")   "|                           Create log: ", this%log, "                             |"
-            write (*,"(a40, l10, a30)")   "|                           Debug mode: ", this%debug, "                             |"
             write (*,"(a40, i10, a30)")   "|                 Number of processors: ", this%nproc, "                             |"
             write (*,"(a40, l10, a30)")   "|        Load external velocitiy model: ", this%extvel, "                             |"
             if (this%extvel) write (*,*) trim(this%externalfilename)
@@ -239,10 +251,14 @@ module parameterMod
                 write (*,"(a40, l10, a30)")   "|                  Plot velocity field: ", movie%velocity, "                             |"
                 write (*,"(a40, l10, a30)")   "|              Plot displacement field: ", movie%displacement, "                             |"
                 write (*,"(a40, l10, a30)")   "|                    Plot stress field: ", movie%stress, "                             |"
-                write (*,"(a40, l10, a30)")   "|    Plot pressure field for 1st fluid: ", movie%p1, "                             |"
-                write (*,"(a40, l10, a30)")   "|    Plot velocity field for 1st fluid: ", movie%v1, "                             |"
-                write (*,"(a40, l10, a30)")   "|    Plot pressure field for 2nd fluid: ", movie%p2, "                             |"
-                write (*,"(a40, l10, a30)")   "|    Plot velocity field for 2nd fluid: ", movie%v2, "                             |"
+                if (this%poroelastic) then
+                    write (*,"(a40, l10, a30)")   "|    Plot pressure field for 1st fluid: ", movie%p1, "                             |"
+                    write (*,"(a40, l10, a30)")   "|    Plot velocity field for 1st fluid: ", movie%v1, "                             |"
+                    if (this%fluidn == 2) then
+                        write (*,"(a40, l10, a30)")   "|    Plot pressure field for 2nd fluid: ", movie%p2, "                             |"
+                        write (*,"(a40, l10, a30)")   "|    Plot velocity field for 2nd fluid: ", movie%v2, "                             |"
+                    endif
+                endif
             end if
             write (*, "(a80)") "|------------------------------------------------------------------------------|"
             write (*, "(a80)") "|                         Parameters for timeintegration                       |"
@@ -250,7 +266,7 @@ module parameterMod
             write (*,"(a40, i10, a30)")   "|                      Timeintegartion: ", this%timeint, "                             |"
             write (*,"(a40, l10, a30)")   "| Calculate number of timesteps autom.: ", this%autont, "                             |"
             if (this%autont) then
-                write (*,"(a40, es10.4, a30)") "|                 Total simulated time: ", this%t_total, "                             |"
+                write (*,"(a40, es10.3, a30)") "|                 Total simulated time: ", this%t_total, "                             |"
             else
                 write (*,"(a40, i10, a30)")   "|                  Number of timesteps: ", this%nt, "                             |"
             end if
@@ -319,6 +335,19 @@ module parameterMod
             write (*,"(a40, l10, a30)")   "|                 Calculate divergence: ", this%div, "                             |"
             write (*,"(a40, l10, a30)")   "|                       Calculate curl: ", this%curl, "                             |"
             write (*, "(a80)") "|------------------------------------------------------------------------------|"
+            write (*, "(a80)") "|                       Parameters regarding inversion                         |"
+            write (*, "(a80)") "|------------------------------------------------------------------------------|"
+            write (*,"(a40, l10, a30)")   "|                            Inversion: ", this%inversion, "                             |"
+            write (*,"(a40, l10, a30)")   "|                           Time shift: ", this%time_shift, "                             |"
+            if (this%inversion) then
+                write (*,"(a40, i10, a30)")   "|            Number of inversion steps: ", this%inversionSteps, "                             |"
+                write (*,"(a40, f10.1, a30)")   "|                          Mask radius: ", this%maskradius, "                             |"
+                write (*,"(a40, f10.1, a30)")   "|                Lowest frequency used: ", this%lowfreq, "                             |"
+                write (*,"(a40, f10.1, a30)")   "|               Highest frequency used: ", this%highfreq, "                             |"
+            endif
+
+
+
         end if
     end subroutine readParfile
 

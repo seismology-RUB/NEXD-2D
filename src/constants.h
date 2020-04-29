@@ -1,17 +1,34 @@
 ! -*- f90 -*-
+
+  !!
+  !! Start of part that can be adjusted
+  !!
   integer, parameter :: SIZE_REAL = 4
   integer, parameter :: SIZE_DOUBLE = 8
-  integer, parameter :: max_length_string = 400
 
-  integer, parameter :: CUSTOM_REAL = SIZE_DOUBLE
-  integer, parameter :: ORDER = 4
+  integer, parameter :: CUSTOM_REAL = SIZE_DOUBLE ! Single precision or double precision
+  integer, parameter :: ORDER = 4 ! Order of spatial interpolation within the elements
+
+  character(len=256), parameter :: outpath = "out/" ! Path for normal output
+  character(len=256), parameter :: adjpath = "adjoint/" ! Path for results and temporal files for adjoint caculations
+  character(len=256), parameter :: invpath = "inversion/" ! Path for results of the inversion
+  character(len=256), parameter :: temppath = "inversion/"  ! Path for large files that save the wavefield during the inversion
+
+  integer, parameter :: nMB = 3 ! Number of SLS for attenuation
+
+  !!
+  !! End of part that can be adjusted. Change things below only when
+  !! you really know what you are doing there!
+  !!
+
+  integer, parameter :: max_length_string = 400
   integer, parameter :: NGLL= ORDER +1 !5
   integer, parameter :: Np=(ORDER+1)*(ORDER+2)/2
   integer, parameter :: NpF=ORDER+1
   integer, parameter :: nsurface = 3
-  real(kind=CUSTOM_REAL), parameter :: PI = 3.141592653589793 
+  real(kind=CUSTOM_REAL), parameter :: PI = 3.141592653589793
   real(kind=CUSTOM_REAL), parameter :: g = 9.81
-  real(kind=CUSTOM_REAL), parameter :: EPS = 1.0e-5 ! 1e-5 
+  real(kind=CUSTOM_REAL), parameter :: EPS = 1.0e-5 ! 1e-5
   real(kind=CUSTOM_REAL), dimension(15), parameter :: balpha=(/0.0000, 0.0000, 1.4152, 0.1001,&
        & 0.2751, 0.9800, 1.0999, 1.2832, 1.3648, 1.4773, 1.4959, 1.5743, 1.5770, 1.6223, 1.6258/)
 
@@ -19,9 +36,6 @@
   real(kind=custom_real), parameter :: zero = 0.0
   real(kind=custom_real), parameter :: one = 1.0
   real(kind=custom_real), parameter :: two = 2.0
-
-! attenuation
-  integer, parameter :: nMB = 3 ! Number of SLS
 
 ! maximum number of neighbors per element
   integer, parameter :: max_neighbor = 10 !5

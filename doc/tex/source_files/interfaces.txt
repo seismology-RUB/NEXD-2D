@@ -3,9 +3,10 @@
 #  First line: Number of interface types
 #  Following lines: specification of interfaces from left to right
 #  type (elastic [other interface-types are in development]), 
-#  thickness of crack [m], Elastic Modulus [GPa], C_N, C_T
+#  nu_N. nu_T: Relaxationfrequencies of the interface part normal and 
+#  tangential to the fracture plan, respectively.
 #-------------------------------------------------------------------
 BEGIN
 1
-elastic 1.e-3  84.4e9   69959   106776
+elastic 100 100
 END

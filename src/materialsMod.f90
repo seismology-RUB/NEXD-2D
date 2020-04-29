@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -36,15 +36,17 @@ module materialsMod
     type materialVar
         real(kind=custom_real) :: vp         !P-wave velocity
         real(kind=custom_real) :: vs         !S-wave velocity
-        real(kind=custom_real) :: lambda     !1st Lamé parameter
-        real(kind=custom_real) :: mu         !2nd Lamé parameter
+        real(kind=custom_real) :: vpu        !unrelaxed P-wave velocity
+        real(kind=custom_real) :: vsu        !unrelaxed S-wave velocity
+        real(kind=custom_real) :: lambda     !1st Lame parameter
+        real(kind=custom_real) :: mu         !2nd Lame parameter
         real(kind=custom_real) :: rho        !Density
         real(kind=custom_real) :: imp_vp     !Impedance with respect to vp
         real(kind=custom_real) :: imp_vs     !Impedance with respect to vs
         real(kind=custom_real) :: qp         !Qualityfactor for P-wave speed
         real(kind=custom_real) :: qs         !Qualityfactor for S-wave speed
-        real(kind=CUSTOM_REAL), dimension(nMB) :: ylambda   !Anelastic coefficient regarding the 1st Lamé parameter
-        real(kind=CUSTOM_REAL), dimension(nMB) :: ymu       !Anelastic coefficient regarding the 2st Lamé parameter
+        real(kind=CUSTOM_REAL), dimension(nMB) :: ylambda   !Anelastic coefficient regarding the 1st Lame parameter
+        real(kind=CUSTOM_REAL), dimension(nMB) :: ymu       !Anelastic coefficient regarding the 2st Lame parameter
         real(kind=CUSTOM_REAL), dimension(nMB) :: omegaL    !Relaxation frequencies of the Maxwellbodys
     end type materialVar
 
@@ -53,8 +55,8 @@ module materialsMod
         !parameters to read in
         integer :: typ
         real(kind=custom_real) :: rhos        !solid density
-        real(kind=custom_real) :: lambda      !1st Lamé parameter
-        real(kind=custom_real) :: my          !2nd Lamé parameter / shear modulus
+        real(kind=custom_real) :: lambda      !1st Lame parameter
+        real(kind=custom_real) :: my          !2nd Lame parameter / shear modulus
         real(kind=custom_real) :: phi         !porosity
         real(kind=custom_real) :: kappa       !permeabilty
         real(kind=custom_real) :: biot        !Biot coefficient
@@ -100,8 +102,8 @@ module materialsMod
 !    type attenuationVar
 !        real(kind=custom_real) :: vp                        !P-wave velocity (unrelaxed)
 !        real(kind=custom_real) :: vs                        !S-wave velocity (unrelaxed)
-!        real(kind=custom_real) :: lambda                    !1st Lamé parameter (unrelaxed)
-!        real(kind=custom_real) :: mu                        !2nd Lamé parameter (unrelaxed)
+!        real(kind=custom_real) :: lambda                    !1st Lame parameter (unrelaxed)
+!        real(kind=custom_real) :: mu                        !2nd Lame parameter (unrelaxed)
 !
 !    end type attenuationVar
     contains
@@ -122,10 +124,10 @@ module materialsMod
         call addTrace(errmsg, myname)
 
         ! materials values
-        call readMaterialProperties(par, mat, 19, iregion, trim('cubit/matprop'), errmsg)
+        call readMaterialProperties(par, mat, 19, iregion, trim('mesh/matprop'), errmsg)
 
         ! materials array
-        call readMaterialFile(par, matInd, nelem, 19, trim('cubit/mat'), errmsg)
+        call readMaterialFile(par, matInd, nelem, 19, trim('mesh/mat'), errmsg)
 
         !Attenuation
         if (par%attenuation) then
@@ -151,11 +153,11 @@ module materialsMod
         if (par%extmatprop) then
             call readPorousMaterialProperties(par, poromat, 19, trim(par%extmatpropfilename), errmsg)
         else
-            call readPorousMaterialProperties(par, poromat, 19, trim('cubit/matprop'), errmsg)
+            call readPorousMaterialProperties(par, poromat, 19, trim('mesh/matprop'), errmsg)
         end if
 
         ! materials array
-        call readMaterialFile(par, matInd, nelem, 19, trim('cubit/mat'), errmsg)
+        call readMaterialFile(par, matInd, nelem, 19, trim('mesh/mat'), errmsg)
 
         !Attenuation
         !if (par%attenuation) then
@@ -200,6 +202,8 @@ module materialsMod
            mat(i)%lambda = mat(i)%vp**2 * mat(i)%rho - 2*mat(i)%mu
            mat(i)%imp_vp = mat(i)%vp * mat(i)%rho
            mat(i)%imp_vs = mat(i)%vs * mat(i)%rho
+           mat(i)%vpu = mat(i)%vp
+           mat(i)%vsu = mat(i)%vs
         end do
         close(lu)
         deallocate(iregion)
@@ -566,7 +570,7 @@ module materialsMod
         if (par%log) write(*,'(a80)') "|                              read material file                              |"
         allocate(matInd%type(nelem))
         allocate(matInd%pml(nelem))
-        !filename=trim('cubit/mat')
+        !filename=trim('mesh/mat')
         open(unit=lu,file=trim(filename), status='old', iostat = ios)
         if (ios /= 0) then
             call add(errmsg,2,'could not open: '//trim(filename),myname)
@@ -728,10 +732,10 @@ module materialsMod
                 write(*,'(a40, f12.6, a28)') "|                                   vp: ", mat(i)%vp, "                           |"
                 write(*,'(a40, f12.6, a28)') "|                                   vs: ", mat(i)%vs, "                           |"
                 call calcAnelasticCoefficients(par, mat(i), i, errmsg)
-                mat(i)%vp = sqrt((mat(i)%lambda+2*mat(i)%mu)/mat(i)%rho) !vp_i
-                mat(i)%vs = sqrt(mat(i)%mu/mat(i)%rho) !vs
-                write(*,'(a40, f12.6, a28)') "|                      vp (attenuated): ", mat(i)%vp, "                           |"
-                write(*,'(a40, f12.6, a28)') "|                      vs (attenuated): ", mat(i)%vs, "                           |"
+                mat(i)%vpu = sqrt((mat(i)%lambda+2*mat(i)%mu)/mat(i)%rho) !vp_i
+                mat(i)%vsu = sqrt(mat(i)%mu/mat(i)%rho) !vs
+                write(*,'(a40, f12.6, a28)') "|                        unrelaxed vp : ", mat(i)%vpu, "                           |"
+                write(*,'(a40, f12.6, a28)') "|                        unrelaxed vs : ", mat(i)%vsu, "                           |"
                 write(*,'(a80)')  "|                               omegaL:                                        |"
                 do mbs = 1, nMB
                     write(*,'(a40, f12.6, a28)')  "|                                       ", mat(i)%omegaL(mbs), "                           |"
@@ -775,11 +779,11 @@ module materialsMod
         !nMB=number of Maxwell bodies, m=number of values for wk (frequencies) to obtain constant quality factor (see Kaeser et al.)
         m = 2*nMB - 1
 
-        ! maximum and minimum frequency of omegaK use f0 and fr from Parfile
-        omegaMin = par%f_max_att/par%fac_att
+        ! maximum and minimum frequency of omegaK use f0 and fac_att from Parfile
+        omegaMin = 2*pi*par%f_max_att/par%fac_att
         if (par%log) then
             write(*,'(a40, f12.6, a28)') "|                             omegaMin: ", omegaMin, "                           |"
-            write(*,'(a40, f12.6, a28)') "|                             omegaMax: ", par%f_max_att, "                           |"
+            write(*,'(a40, f12.6, a28)') "|                             omegaMax: ", 2*pi*par%f_max_att, "                           |"
         end if
         ! prepare frequencies for determination and inverse values for Qp and Qs
         allocate(omegaK(m), invQp(m), invQs(m))
@@ -791,7 +795,7 @@ module materialsMod
             end do
         else
             ! if there is only one Maxwell body use maximum frequency
-            omegaK(:)= par%f0_att
+            omegaK(:)= 2*pi*par%f0_att
         end if
         c = 1
         do i = 1, m
@@ -824,8 +828,8 @@ module materialsMod
         theta1 = 1.0
         theta2 = 0.0
         do j = 1, nMB
-           theta1 = theta1 - yp(j)/(1+(par%f0_att/mat%omegaL(j))**2)
-           theta2 = theta2 + yp(j)*(par%f0_att/mat%omegaL(j))/(1+(par%f0_att/mat%omegaL(j))**2)
+           theta1 = theta1 - yp(j)/(1+(2*pi*par%f0_att/mat%omegaL(j))**2)
+           theta2 = theta2 + yp(j)*(2*pi*par%f0_att/mat%omegaL(j))/(1+(2*pi*par%f0_att/mat%omegaL(j))**2)
         end do
         R   = sqrt(theta1**2 + theta2**2)
         Mup = mat%rho * mat%vp**2 * (R + theta1)/(2*R**2)
@@ -834,21 +838,21 @@ module materialsMod
         theta1 = 1.0
         theta2 = 0.0
         do j = 1, nMB
-           theta1 = theta1 - ys(j)/(1+(par%f0_att/mat%omegaL(j))**2)
-           theta2 = theta2 + ys(j)*(par%f0_att/mat%omegaL(j))/(1+(par%f0_att/mat%omegaL(j))**2)
+           theta1 = theta1 - ys(j)/(1+(2*pi*par%f0_att/mat%omegaL(j))**2)
+           theta2 = theta2 + ys(j)*(2*pi*par%f0_att/mat%omegaL(j))/(1+(2*pi*par%f0_att/mat%omegaL(j))**2)
         end do
         R   = sqrt(theta1**2+theta2**2)
         Mus = mat%rho * mat%vs**2 * (R + theta1)/(2*R**2)
-
-        ! Lame parameters:
-        mat%mu = Mus
-        mat%lambda = Mup - 2*mat%mu
 
         ! get the anelastic coefficients for the Lame parameters
         do j=1,nMB
            mat%ylambda(j) = (1+ (2 * mat%mu) / mat%lambda) * yp(j) - (2 * mat%mu)/mat%lambda * ys(j)
            mat%ymu(j)     = ys(j)
         end do
+
+        ! get unrelaxed vp and vs
+        mat%vpu=sqrt((mat%lambda+2*mat%mu)/mat%rho)
+        mat%vsu=sqrt(mat%mu/mat%rho)
 
 
         !The remaining part provides two files to print Qp and vp as a function of frequency
@@ -857,14 +861,14 @@ module materialsMod
            wtest(i) = (i/2)**2 ! frequencies where Qp and vp will be plotted
         end do
 
-        open(unit=27,file="out/wktest",status='unknown')
+        open(unit=27,file=trim(outpath)//"wktest",status='unknown')
         do i = 1, m
             write(27,*) i,omegaK(i)
         end do
         close(27)
 
-        write(filename,"('out/disp_Q_mat',i3.3)") matnum
-        open(unit=27,file=trim(filename),status='unknown') !Q(omega)
+        write(filename,"('disp_Q_mat',i3.3)") matnum
+        open(unit=27,file=trim(outpath)//trim(filename),status='unknown') !Q(omega)
         do i=1,dim
            temp1=0
            temp2=0
@@ -877,8 +881,8 @@ module materialsMod
         end do
         close(27)
 
-        write(filename,"('out/disp_v_mat',i3.3)") matnum
-        open(unit=27,file=trim(filename),status='unknown') ! vp(omega)
+        write(filename,"('disp_v_mat',i3.3)") matnum
+        open(unit=27,file=trim(outpath)//trim(filename),status='unknown') ! vp(omega)
         do i=1,dim
            itemp1=0
            itemp2=0
@@ -899,4 +903,103 @@ module materialsMod
         deallocate(omegaK, invQp, invQs)
 
     end subroutine calcAnelasticCoefficients
+
+    subroutine calcAnelasticCoefficientsElement(par, qp, qs, vp, vs, rho, ylambda, ymu, lambda, mu, errmsg)
+        ! For information and equations see Kaeser et al. (2006): An arbitrary high-order Discontinous Galerkin
+        ! method for elastic waves on unstructured  meshes - III. Viscoelastic attenuation
+        !input
+        type(parameterVar) :: par
+        type(error_message) :: errmsg
+        !local
+        integer :: i,j,m,c
+        real(kind=CUSTOM_REAL) :: qp,qs,vp,vs, rho, lambda, mu
+        real(kind=CUSTOM_REAL), dimension(:) :: ylambda,ymu
+        real(kind=CUSTOM_REAL) :: theta1, theta2, R
+        real(kind=CUSTOM_REAL) :: Mup, Mus
+        real(kind=CUSTOM_REAL) :: omegaMin
+        real(kind=CUSTOM_REAL), dimension(nMB) :: yp,ys
+        real(Kind=CUSTOM_REAL), dimension(:), allocatable :: omegaK, omegaL, invQp, invQs
+        real(Kind=CUSTOM_REAL), dimension(:,:), allocatable :: Mp,Ms
+        character(len=25) :: myname = "calcAnelasticCoefficients"
+
+        !Add Module to error message trace
+        call addTrace(errmsg, myname)
+        !nMB=number of Maxwell bodies, m=number of values for wk (frequencies) to obtain constant quality factor (see Kaeser et al.)
+        m = 2*nMB - 1
+
+        ! maximum and minimum frequency of omegaK use f0 and fac_att from Parfile
+        omegaMin = 2*pi*par%f_max_att/par%fac_att
+        ! prepare frequencies for determination and inverse values for Qp and Qs
+        allocate(omegaK(m), omegaL(m), invQp(m), invQs(m))
+
+        ! setup equidistant (log) frequencies in the requestet frequency band
+        if (nMB > 1) then
+            do i = 1, m
+                omegaK(i) = exp(log(omegaMin) + (i-1.0)/(2.0*(nMB-1)) * log(par%fac_att) )
+            end do
+        else
+            ! if there is only one Maxwell body use maximum frequency
+            omegaK(:)= 2*pi*par%f0_att
+        end if
+        c = 1
+        do i = 1, m
+            if(mod(i, 2) == 1) then
+                ! get the relaxation frequencies of the nMB mechanisms (see text between eq. 5 and 6 of Kaeser et al.)
+                omegaL(c) = omegaK(i)
+                c = c + 1
+            end if
+        end do
+
+        !set up matrix of the system where we wat to optain the anelastic constants for the wavespeeds
+        allocate(Mp(m,nMB))
+        allocate(Ms(m,nMB))
+        do i=1,m
+           do j=1,nMB
+              Mp(i,j) =  ( omegaL(j)*omegaK(i)+omegaL(j)**2/qp ) / (omegaL(j)**2+omegaK(i)**2)
+              Ms(i,j) =  ( omegaL(j)*omegaK(i)+omegaL(j)**2/qs ) / (omegaL(j)**2+omegaK(i)**2)
+           end do
+        end do
+
+        ! define inverse quality factors at every used frequency wk
+        invQp(:) = 1.0/qp
+        invQs(:) = 1.0/qs
+        ! solve the system invQp=Mp for yp (same for ys)
+        call solveLinearSystemQR(Mp, invQp, yp, m, nMB, errmsg, CUSTOM_REAL)
+        call solveLinearSystemQR(Ms, invQs, ys, m, nMB, errmsg, CUSTOM_REAL)
+
+        ! get the unrelaxed Lame parameters mu and lambda
+        !P - Waves
+        theta1 = 1.0
+        theta2 = 0.0
+        do j = 1, nMB
+           theta1 = theta1 - yp(j)/(1+(2*pi*par%f0_att/omegaL(j))**2)
+           theta2 = theta2 + yp(j)*(2*pi*par%f0_att/omegaL(j))/(1+(2*pi*par%f0_att/omegaL(j))**2)
+        end do
+        R   = sqrt(theta1**2 + theta2**2)
+        Mup = rho * vp**2 * (R + theta1)/(2*R**2)
+
+        !S - Waves
+        theta1 = 1.0
+        theta2 = 0.0
+        do j = 1, nMB
+           theta1 = theta1 - ys(j)/(1+(2*pi*par%f0_att/omegaL(j))**2)
+           theta2 = theta2 + ys(j)*(2*pi*par%f0_att/omegaL(j))/(1+(2*pi*par%f0_att/omegaL(j))**2)
+        end do
+        R   = sqrt(theta1**2+theta2**2)
+        Mus = rho * vs**2 * (R + theta1)/(2*R**2)
+
+        ! Lame parameters:
+        mu = Mus
+        lambda = Mup - 2*mu
+
+        ! get the anelastic coefficients for the Lame parameters
+        do j=1,nMB
+           ylambda(j) = (1+ (2 * mu) / lambda) * yp(j) - (2 * mu)/lambda * ys(j)
+           ymu(j)     = ys(j)
+        end do
+
+        deallocate(Mp,Ms)
+        deallocate(omegaK, omegaL, invQp, invQs)
+
+    end subroutine calcAnelasticCoefficientsElement
 end module materialsMod

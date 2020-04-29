@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -38,7 +38,8 @@ module sourceReceiverMod
         integer, dimension(:), pointer :: srcelem => null()                       !Element in which the source is located
         integer, dimension(:), pointer :: srci => null()                          !Source number
         integer, dimension(:), pointer :: srctype => null()                       !Type of source: 1 = Moment tensor, 0 = single force
-        integer, dimension(:), pointer :: srcstf => null()                        !Type of source-time-function: 1 = gauss, 2 = ricker, 3 = sin^3, 4 = external
+        integer, dimension(:), pointer :: srcstf => null()
+        integer, dimension(:), allocatable :: srcnr                        !Type of source-time-function: 1 = gauss, 2 = ricker, 3 = sin^3, 4 = external
         character(len=80), dimension(:), pointer :: extwavelet => null()          !File with external source wavelet
         real(kind=CUSTOM_REAL), dimension(:), pointer :: srcf0 => null()          !Center frequency of sft
         real(kind=CUSTOM_REAL), dimension(:), pointer :: srcfactor => null()      !Factor of the sft
@@ -167,7 +168,6 @@ module sourceReceiverMod
                "|                     Momenttensor Mzz: ", this%srcM(2, isrc), "                             |"
                 write (*,"(a40, f10.3, a30)")&
                "|                     Momenttensor Mxz: ", this%srcM(3, isrc), "                             |"
-                write (*, "(a80)") "|------------------------------------------------------------------------------|"
             enddo
         endif
     end subroutine initSource
@@ -224,20 +224,20 @@ module sourceReceiverMod
             write (*, "(a80)") "|------------------------------------------------------------------------------|"
             do irec=1,this%nrec
                 write (*,"(a40, i10, a30)") &
-               "|                             reciever: ", this%recnr(irec), "                             |"
+               "|                             receiver: ", this%recnr(irec), "                             |"
                 write (*,"(a40, f10.2, a30)")&
-               "|              X-value of the reciever: ", this%recxz(1, irec), "                             |"
+               "|              X-value of the receiver: ", this%recxz(1, irec), "                             |"
                 write (*,"(a40, f10.2, a30)")&
-               "|              Z-value of the reciever: ", this%recxz(2, irec), "                             |"
+               "|              Z-value of the receiver: ", this%recxz(2, irec), "                             |"
                 write (*,"(a40, f10.2, a30)")&
-               "|       rotation angle of the reciever: ", this%rec_ang(irec), "                             |"
+               "|       rotation angle of the receiver: ", this%rec_ang(irec), "                             |"
                 write (*, "(a80)") "|------------------------------------------------------------------------------|"
 
             enddo
         endif
     end subroutine initReceiver
 
-    subroutine findSource(par,this,vx,vz,nelem,ibool,coord,elem,dr,ds,pml,errmsg)
+    subroutine findSource(par,this,vx,vz,nelem,ibool,coord,elem,dr,ds,pml,location,errmsg)
         type(parameterVar) :: par
         type(srcVar) :: this
         type(error_message) :: errmsg
@@ -251,7 +251,7 @@ module sourceReceiverMod
         logical, dimension(nelem,this%nsrc) :: checkelem
         integer :: isrc, i, ie, j, iglob, besave
         integer, dimension(NP) :: iv
-        real(kind=CUSTOM_REAL) :: epsilon
+        real(kind=CUSTOM_REAL) :: eps
         real(kind=CUSTOM_REAL) :: src_r, src_s
         real(kind=CUSTOM_REAL), dimension(1) :: src_rr, src_ss
         real(kind=CUSTOM_REAL), dimension(2) :: xztemp
@@ -267,6 +267,7 @@ module sourceReceiverMod
 
         character(len=10) :: myname = "findSource"
         character(len=256) :: errstr
+        character(len=4) :: location
 
 
         call addTrace(errmsg, myname)
@@ -289,12 +290,12 @@ module sourceReceiverMod
 
         besave=1
         do while (isrc <= this%nsrc)
-            epsilon=1e7
+            eps=1e7
             do ie=1,nelem
                 do i=1,Np
                     iglob=ibool(i,ie)
-                    if ((sqrt((vx(iglob)-this%srcxz(1,isrc))**2+(vz(iglob)-this%srcxz(2,isrc))**2) < epsilon).and.checkelem(ie,isrc)) then
-                        epsilon= sqrt((vx(iglob)-this%srcxz(1,isrc))**2+(vz(iglob)-this%srcxz(2,isrc))**2)
+                    if ((sqrt((vx(iglob)-this%srcxz(1,isrc))**2+(vz(iglob)-this%srcxz(2,isrc))**2) < eps).and.checkelem(ie,isrc)) then
+                        eps= sqrt((vx(iglob)-this%srcxz(1,isrc))**2+(vz(iglob)-this%srcxz(2,isrc))**2)
                         this%srci=iglob !initial guess
                         src_r=r(i)
                         src_s=s(i)
@@ -342,38 +343,33 @@ module sourceReceiverMod
                 src_s = src_s + dds
 
                 if (i==num_iter) then
-                    if (src_r < -1.01) then
+                    if (src_r < -1.0001) then
+                        checkelem(ie,isrc) = .false.
+                        besave=besave+1
+                    else if (src_s < -1.0001) then
                         isrc=isrc
                         checkelem(ie,isrc) = .false.
                         besave=besave+1
-                    else if (src_r > 1.01) then
-                        isrc=isrc
-                        checkelem(ie,isrc) = .false.
-                        besave=besave+1
-                    else if (src_s < -1.01) then
-                        isrc=isrc
-                        checkelem(ie,isrc) = .false.
-                        besave=besave+1
-                    else if (src_s > 1.01) then
+                    else if (src_s + src_r > 0.0001) then
                         isrc=isrc
                         checkelem(ie,isrc) = .false.
                         besave=besave+1
                     else
                         this%srcrs(1,isrc) = src_r
                         this%srcrs(2,isrc) = src_s
-                        if (pml(ie) == 1 .and. par%set_pml) then
+                        if (pml(ie) == 1 .and. par%set_pml .and. location=='glob') then
                             write(errstr,*) "Source ", isrc, " is located inside the PML layer. Check the location of this source."
                             call add(errmsg, 2, errstr, myname, "data/source")
                         end if
-                        if (par%log) then
-                            write(*,'(a40, i4, a36)') "|                          Find source: ",isrc, "                                   |"
-                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
-                                "|                   global coordinates: (", xz(1), ", ",  xz(2), " )                  |"
-                            write(*,'(a40, i4, a36)') "|               Final guess for source: ",isrc, "                                   |"
-                            write(*,'(a40, i6, a34)') "|                       global element: ", this%srcelem(isrc), "                                 |"
-                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
-                                "|                    local coordinates: (", this%srcrs(1,isrc),", ", this%srcrs(2,isrc), " )                  |"
-                        end if
+!                        if (par%log) then
+!                            write(*,'(a40, i4, a36)') "|                          Find source: ",isrc, "                                   |"
+!                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+!                                "|                   global coordinates: (", xz(1), ", ",  xz(2), " )                  |"
+!                            write(*,'(a40, i4, a36)') "|               Final guess for source: ",isrc, "                                   |"
+!                            write(*,'(a40, i6, a34)') "|                       global element: ", this%srcelem(isrc), "                                 |"
+!                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+!                                "|                    local coordinates: (", this%srcrs(1,isrc),", ", this%srcrs(2,isrc), " )                  |"
+!                        end if
                         isrc=isrc+1
                         besave=1
                     end if
@@ -388,7 +384,7 @@ module sourceReceiverMod
         end do !isrc
     end subroutine findSource
 
-    subroutine findReceiver(par,this,vx,vz,nelem,ibool,coord,elem,dr,ds,pml,errmsg)
+    subroutine findReceiver(par,this,vx,vz,nelem,ibool,coord,elem,dr,ds,pml,location,errmsg)
         type(parameterVar) :: par
         type(recVar), intent(inout) :: this
         type(error_message) :: errmsg
@@ -404,7 +400,7 @@ module sourceReceiverMod
         logical, dimension(nelem,this%nrec) :: checkelem
         integer :: irec, i, ie, j, iglob, besave
         integer, dimension(NP) :: iv
-        real(kind=CUSTOM_REAL) :: epsilon
+        real(kind=CUSTOM_REAL) :: eps
         real(kind=CUSTOM_REAL) :: rec_r, rec_s
         real(kind=CUSTOM_REAL), dimension(1) :: rec_rr, rec_ss
         real(kind=CUSTOM_REAL), dimension(2) :: xztemp
@@ -420,6 +416,7 @@ module sourceReceiverMod
 
         character(len=12) :: myname = "findReceiver"
         character(len=256) :: errstr
+        character(len=4) :: location
 
         call addTrace(errmsg, myname)
 
@@ -440,12 +437,12 @@ module sourceReceiverMod
 
         besave=1
         do while (irec <= this%nrec)
-            epsilon=1e7
+            eps=1e7
             do ie=1,nelem
                 do i=1,Np
                     iglob=ibool(i,ie)
-                    if ((sqrt((vx(iglob)-this%recxz(1,irec))**2+(vz(iglob)-this%recxz(2,irec))**2) < epsilon).and.checkelem(ie,irec)) then
-                        epsilon= sqrt((vx(iglob)-this%recxz(1,irec))**2+(vz(iglob)-this%recxz(2,irec))**2)
+                    if ((sqrt((vx(iglob)-this%recxz(1,irec))**2+(vz(iglob)-this%recxz(2,irec))**2) < eps).and.checkelem(ie,irec)) then
+                        eps= sqrt((vx(iglob)-this%recxz(1,irec))**2+(vz(iglob)-this%recxz(2,irec))**2)
                         this%reci=iglob !initial guess
                         rec_r=r(i)
                         rec_s=s(i)
@@ -492,42 +489,54 @@ module sourceReceiverMod
                 rec_s = rec_s + dds
 
                 if (i==num_iter) then
-                    if (rec_r < -1.01) then
-                        irec=irec
+!                    if (rec_r < -1.01) then
+!                        irec=irec
+!                        checkelem(ie,irec) = .false.
+!                        besave=besave+1
+!                    else if (rec_r > 1.01) then
+!                        irec=irec
+!                        checkelem(ie,irec) = .false.
+!                        besave=besave+1
+!                    else if (rec_s < -1.01) then
+!                        irec=irec
+!                        checkelem(ie,irec) = .false.
+!                        besave=besave+1
+!                    else if (rec_s > 1.01) then
+!                        irec=irec
+!                        checkelem(ie,irec) = .false.
+!                        besave=besave+1
+
+
+                    if (rec_r < -1.0001) then
                         checkelem(ie,irec) = .false.
                         besave=besave+1
-                    else if (rec_r > 1.01) then
-                        irec=irec
+                    else if (rec_s < -1.0001) then
                         checkelem(ie,irec) = .false.
                         besave=besave+1
-                    else if (rec_s < -1.01) then
-                        irec=irec
-                        checkelem(ie,irec) = .false.
-                        besave=besave+1
-                    else if (rec_s > 1.01) then
+                    else if (rec_s + rec_r > 0.0001) then
                         irec=irec
                         checkelem(ie,irec) = .false.
                         besave=besave+1
                     else
                         this%recrs(1,irec) = rec_r
                         this%recrs(2,irec) = rec_s
-                        if (pml(ie) == 1 .and. par%set_pml) then
+                        if (pml(ie) == 1 .and. par%set_pml .and. location=='glob') then
                             write(errstr,*) "Station ", irec, " is located inside the PML layer. Check the location of this station."
                             call add(errmsg, 1, errstr, myname)
                         end if
-                        if (par%log) then
-                            write(*,'(a40, i4, a36)') "|                        Find receiver: ",irec, "                                   |"
-                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
-                                "|                   global coordinates: (", xz(1), ", ",  xz(2), " )                  |"
-                            write(*,'(a40, i4, a36)') "|             Final guess for receiver: ",irec, "                                   |"
-                            write(*,'(a40, i6, a34)') "|                       global element: ", this%recelem(irec), "                                 |"
-                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
-                                "|                    local coordinates: (", this%recrs(1,irec),", ", this%recrs(2,irec), " )                  |"
-                        end if
+!                        if (par%log) then
+!                            write(*,'(a40, i4, a36)') "|                        Find receiver: ",irec, "                                   |"
+!                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+!                                "|                   global coordinates: (", xz(1), ", ",  xz(2), " )                  |"
+!                            write(*,'(a40, i4, a36)') "|             Final guess for receiver: ",irec, "                                   |"
+!                            write(*,'(a40, i6, a34)') "|                       global element: ", this%recelem(irec), "                                 |"
+!                            write(*,'(a41, f8.2, a2, f8.2, a21)') &
+!                                "|                    local coordinates: (", this%recrs(1,irec),", ", this%recrs(2,irec), " )                  |"
+!                        end if
                         irec=irec+1
                         besave=1
                     end if
-                    if (besave > 10) then !10 versuche sonst abbruch
+                    if (besave > 10) then
                         write(errstr,*) "ERROR, could not find receiver", irec,"at global coordinates", xz(1),xz(2)
                         call add(errmsg, 2, errstr, myname, "data/stations")
                         call print(errmsg)
@@ -558,7 +567,7 @@ module sourceReceiverMod
     !"--------------------------------------------------------------------------------------"
     ! prepare src recalculate
 
-    subroutine prepareRecalcSrc(this,nsrc,srcxz,srctype,srcstf,extwavelet,srcf0,srcfactor,srcangle_force,srcM, delay)
+    subroutine prepareRecalcSrc(this,nsrc,srcxz,srctype,srcstf,extwavelet,srcf0,srcfactor,srcangle_force,srcM, delay, srcnr)
         type(srcVar) :: this
         integer :: nsrc
         real(kind=CUSTOM_REAL), dimension(:,:), pointer :: srcxz, srcM
@@ -566,6 +575,7 @@ module sourceReceiverMod
         real(kind=CUSTOM_REAL), dimension(:), pointer :: srcangle_force
         real(kind=custom_real), dimension(:), pointer :: delay
         integer, dimension(:), pointer :: srctype, srcstf
+        integer, dimension(:), allocatable :: srcnr
         character(len=80), dimension(:), pointer :: extwavelet
         real(kind=CUSTOM_REAL), dimension(2,nsrc) :: tempxz
         real(kind=CUSTOM_REAL), dimension(3,nsrc) :: tempm
@@ -594,6 +604,7 @@ module sourceReceiverMod
         allocate(this%srcfactor(nsrc))
         allocate(this%srcangle_force(nsrc))
         allocate(this%srcM(3,nsrc))
+        allocate(this%srcnr(nsrc))
         this%nsrc = nsrc
         this%srcxz = tempxz
         this%srctype = temptype
@@ -604,6 +615,7 @@ module sourceReceiverMod
         this%srcangle_force = tempangle_force
         this%srcM = tempm
         this%delay = delay
+        this%srcnr = srcnr
     end subroutine prepareRecalcSrc
 
     !"--------------------------------------------------------------------------------------"
@@ -640,7 +652,7 @@ module sourceReceiverMod
         type(srcVar) :: this
         character(len=*) :: filename
         !write(*,'(a80)') "|------------------------------------------------------------------------------|"
-        write(*,'(a40, a16, a24)') "|            write soure database-file: ", trim(filename), "                       |"
+        !write(*,'(a40, a16, a24)') "|            write soure database-file: ", trim(filename), "                       |"
         open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
         write(27) this%nsrc
         write(27) this%srcxz
@@ -655,6 +667,7 @@ module sourceReceiverMod
         write(27) this%srcangle_force
         write(27) this%srcM
         write(27) this%delay
+        write(27) this%srcnr
         close(27)
     end subroutine writeSrcVar
 
@@ -663,7 +676,7 @@ module sourceReceiverMod
     subroutine writeRecVar(this,filename)
         type(recVar) :: this
         character(len=*) :: filename
-        write(*,'(a40, a16, a24)') "|         write receiver database-file: ", trim(filename), "                       |"
+        !write(*,'(a40, a16, a24)') "|         write receiver database-file: ", trim(filename), "                       |"
         open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
         write(27) this%nrec
         write(27) this%recxz
@@ -681,7 +694,7 @@ module sourceReceiverMod
         type(srcVar) :: this
         character(len=*) :: filename
 
-        write(*,'(a40, a16, a24)') "|            read source database-file: ", trim(filename), "                       |"
+        !write(*,'(a40, a16, a24)') "|            read source database-file: ", trim(filename), "                       |"
 
         open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
         read(27) this%nsrc
@@ -698,6 +711,7 @@ module sourceReceiverMod
         allocate(this%srcangle_force(this%nsrc))
         allocate(this%srcM(3,this%nsrc))
         allocate(this%delay(this%nsrc))
+        allocate(this%srcnr(this%nsrc))
 
         read(27) this%srcxz
         read(27) this%srcrs
@@ -711,6 +725,7 @@ module sourceReceiverMod
         read(27) this%srcangle_force
         read(27) this%srcM
         read(27) this%delay
+        read(27) this%srcnr
         close(27)
     end subroutine readSrcVar
 
@@ -719,8 +734,8 @@ module sourceReceiverMod
     subroutine readRecVar(this,filename)
         type(recVar) :: this
         character(len=*) :: filename
-        write(*,'(a80)') "|------------------------------------------------------------------------------|"
-        write(*,'(a40, a16, a24)') "|          read receiver database-file: ", trim(filename), "                       |"
+        !write(*,'(a80)') "|------------------------------------------------------------------------------|"
+        !write(*,'(a40, a16, a24)') "|          read receiver database-file: ", trim(filename), "                       |"
 
         open(unit=27,file=trim(filename),form = "UNFORMATTED",status='unknown')
         read(27) this%nrec
@@ -756,6 +771,7 @@ module sourceReceiverMod
         if (associated(this%srcangle_force)) deallocate(this%srcangle_force)
         if (associated(this%srcm)) deallocate(this%srcm)
         if (allocated(this%delay)) deallocate(this%delay)
+        if (allocated(this%srcnr)) deallocate(this%srcnr)
     end subroutine deallocSrcVar
 
     !"--------------------------------------------------------------------------------------"

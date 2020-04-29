@@ -3,7 +3,7 @@
 	It may become necessary for certain users to add a source time function of their own. This chapter describes, which section of the source code and what entries in the parameter files need to be changed.   
 	\section{Source code}
 	\label{sec:srcCode}
-		There are a number of portions of the source code that need to be changed. It is not simply done by adding the function itself, but also modifying the related error messages, so the new function is not rejected. First, the new source time function needs to be added as an additional function in the module "stfMod.f90". It is recommended that the basic structure of the function is similar to the already existing ones. As a basic example the function describing a Ricker-wavelet is shown in code listing \ref{lis:ricker} \\
+		There are a number of portions of the source code that need to be changed. It is not simply done by adding the function itself, but also modifying the related error messages, so the new function is not rejected. First, the new source time function needs to be added as an additional function in the module ``stfMod.f90''. It is recommended that the basic structure of the function is similar to the already existing ones. As a basic example the function describing a Ricker-wavelet is shown in code listing \ref{lis:ricker} \\
 		\lstinputlisting[
         float=ht, 
         captionpos=b, 

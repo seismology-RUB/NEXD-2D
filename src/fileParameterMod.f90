@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -59,25 +59,32 @@ module fileParameterMod
         character (len=17) :: myname = 'getParameterValue'
 
 
-        integer :: i, j, k, ier=0
+        integer :: i, j, k, l, ier=0
         integer, parameter :: seek_set = 0
 
         integer :: set_pos
         integer :: ftell
 
+        l=0
         do while (.not. is_iostat_end(ier))
             read(19, "(a255)", iostat=ier) line
             if (is_iostat_end(ier)) then
                 call add(errmsg, 2, "Parameter, "//trim(name)//" , not found in parameter file...", myname, filename )
             endif
             line = trim(adjustl(line))
+            l=l+1
+            if (l>200) then
+                call add(errmsg, 2, "Parameter, "//trim(name)//" , not found in parameter file...", myname, filename )
+                exit
+            endif
             if (line(1:1) == "#") cycle
             if (line(1:1) == "\n") cycle
             par = getParameterName(line)
             par = trim(par)
             j = scan(line, "=")
-            if (par /= name) cycle
-            if (par == name) then
+            if (par /= name) then
+                cycle
+            else
                 do k = j, len_trim(line)
                     if (line(k:k) /= "=" .and. line(k:k) /= " ") then
                         i=scan(line,'#')

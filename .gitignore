@@ -20,7 +20,10 @@
 #   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------
 
+# files created by the system
 *~
+._*
+.DS_Store
 
 # Files created by the compiler (Fortran)
 *.[oa]
@@ -33,14 +36,19 @@ make.incdep
 
 # Editor files
 .project
+*eclipse*
 
 # Project files / output files
 *.jou
 *.vtk
+!simulations/example_inversion/ref/*vtk
 *.bin
 *seismo*
+!*meas
+!simulations/lambs/ref/*
 *run.csh.*
 *cub*
+*msh*
 *log
 simulations/*/out/*
 simulations/*/bin/*
@@ -87,3 +95,8 @@ metis-4.0.3/pmetis
 *.synctex.gz
 *.tdo
 
+metis-4.0.3
+simulations/testmodel2D
+simulations/zylinder_alu
+simulations/example_linearSlipInterface/out_marc
+simulations/validation3D

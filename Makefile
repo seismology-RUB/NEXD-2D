@@ -1,6 +1,6 @@
 #-----------------------------------------------------------------------
 #   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-#   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 #
 #   This file is part of NEXD 2D.
 #
@@ -219,7 +219,17 @@ obj_solver = program_solver.o \
 	riemannFluxLsiMod.o \
 	timestampMod.o \
 	calendar.o \
-	convert_time.o 
+	convert_time.o \
+	adjointMod.o \
+	timeSeries.o\
+	dateTime.o\
+	recursiveFilterCoefficients.o\
+	fourierTransform.o\
+	realloc.o\
+	filterCoefficientsDecimate.o\
+	timeUtils.o\
+	collectMovieMod.o \
+	mathConstants.o
 
 obj_movie = program_movie.o \
 	constantsMod.o \
@@ -261,14 +271,14 @@ obj_movie = program_movie.o \
 #  Direcory search
 #
 vpath %.o $(obsdir)
-vpath %.f90 $(srcdir)
-vpath %.f $(srcdir) 
-vpath %.c $(srcdir) 
+vpath %.f90 $(srcdir) $(srcdir)/include
+vpath %.f $(srcdir) $(srcdir)/include
+vpath %.c $(srcdir) $(srcdir)/include
 #--------------------------------------------------------
 #  additional directories to be searched for module or include dependencies
 #  default is search in ./ only
 #
-DEPDIRS = $(srcdir) 
+DEPDIRS = $(srcdir) $(srcdir)/include
 #-------------------------------------------------------
 #  Implicit rule to compile .o files from .f90 files.
 #  Because of vpath, targets and dependencies need not be

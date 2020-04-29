@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #-----------------------------------------------------------------------
-#   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
 #
 #   This file is part of NEXD 2D.
 #

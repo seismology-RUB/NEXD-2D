@@ -3,7 +3,7 @@
 #!/usr/bin/env python
 
 #-----------------------------------------------------------------------
-#   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 #
 #   This file is part of NEXD 2D.
 #

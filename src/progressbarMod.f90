@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -29,17 +29,17 @@ module progressbarMod
         integer :: total
         !local
         integer :: k
-        character(len=70) :: bar
+        character(len=80) :: bar
 
-        bar="Progress: [                                                  ] ???%   "
+        bar="|  Progress: [                                                         ] ???%  |"
 
-        write(unit=bar(64:66),fmt="(i3)") 100*j/total
+        write(unit=bar(74:76),fmt="(i3)") 100*j/total
 
-        do k = 1, j*50/total
-            bar(11+k:11+k)="#"
+        do k = 1, j*57/total
+            bar(14+k:14+k)="#"
         enddo
         ! print the progress bar.
-        write(unit=6,fmt="(a1,a70)",advance="no") char(13), bar
+        write(unit=6,fmt="(a1,a80)",advance="no") char(13), bar
         if (j /= total) then
             flush(unit=6)
         else

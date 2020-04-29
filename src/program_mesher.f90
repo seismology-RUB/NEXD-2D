@@ -1,7 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -19,7 +20,7 @@
 !   along with NEXD 2D. If not, see <http://www.gnu.org/licenses/>.
 !-----------------------------------------------------------------------
 program mesher
-    !program to mesh the given cubit files to build a MPI version of the code
+    !program to convert the given mesh files to build a MPI version of the code
     use parameterMod
     use meshMod
     use plotMod
@@ -60,10 +61,15 @@ program mesher
     ! need meshVar to plot the mesh ( not good code but to debug)
     ! plot mesh
     if (par%log) write(*,'(a80)') "|                                  plot mesh                                   |"
-    call triangulation_order3_plot ( "out/mesh.ps", mesh%ncoord, dble(mesh%coord), mesh%nelem, mesh%elem, 2, 2 )
-    filename = "out/pointsmesh.txt"
-    call plotPoints2d(mesh%vx,mesh%vz,filename)
-    if (par%log) write(*,'(a80)') "|------------------------------------------------------------------------------|"
+    call triangulation_order3_plot ( trim(outpath)//"mesh.ps", mesh%ncoord, dble(mesh%coord), mesh%nelem, mesh%elem, 2, 2 )
+    filename = "pointsmesh.txt"
+    call plotPoints2d(mesh%vx,mesh%vz,trim(outpath)//filename)
     if (.level.errmsg == 1) call print(errmsg)
     call deallocMeshvar(mesh)
+    
+    if (par%log) then
+        write(*,'(a80)') "|------------------------------------------------------------------------------|"
+        write(*,'(a80)') "|                              end NEXD2D mesher                               |"
+        write(*,'(a80)') "|------------------------------------------------------------------------------|"
+    end if
 end program mesher

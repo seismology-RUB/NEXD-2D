@@ -1,9 +1,0 @@
-#!/bin/csh
-#$ -pe mpi-fu 8
-#$ -l low 
-#$ -l arch=lx24-amd64 
-#$ -R Y 
-#$ -cwd 
-#$ -hard -q "low.q@minos25" 
-
-mpirun -np $NSLOTS bin/solver

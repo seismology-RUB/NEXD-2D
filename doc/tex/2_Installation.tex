@@ -21,15 +21,15 @@ To install and run the software, a number of requirements have to be met.
 To install NEXD the user needs the following software installed on his system:
 \begin{itemize}
     \item GNU Make (\url{https://www.gnu.org/software/make/}),
-    \item Fortran compiler (GNU Fortran or Intel Fortran). The version 0.3 of this software has been tested using the following compiler versions:
+    \item Fortran compiler (GNU Fortran or Intel Fortran). The version 0.4 of this software has been tested using the following compiler versions:
 		\begin{itemize}
-			\item Intel Fortran version 19.0.0
-			\item GNU Fortran version 4.9.2, 6.3.0 and 7.4.0
+			\item Intel Fortran version 19.0
+			\item GNU Fortran version 4.9.2, 6.3, 7.4, 9.2 and 9.3
 		\end{itemize}
-	Version 0.2 of NEXD 2D also worked with:
+	Version 0.2 of NEXD 2D has also been tested with:
 		\begin{itemize}
 			\item Intel Fortran version 17.0.4
-			\item GNU Fortran version 5.4.0 and 7.3.0
+			\item GNU Fortran version 5.4 and 7.3
 		\end{itemize}	
     \item LAPACK libraries (\url{http://www.netlib.org/lapack/},
     \item MPI libraries, e.g. OpenMPI, 
@@ -37,7 +37,7 @@ To install NEXD the user needs the following software installed on his system:
     \item a Python installation.
 \end{itemize}
  
-A number of Python scripts are used during the installation of NEXD 2D and as an aid in the creation of input files. To run those, a Python version (recommended 2.7, or 3.6 or higher) is required. A good and easy way to get Python is to install it via the Anaconda distribution, which is available for Windows, Mac and Linux. It can be downloaded under \url{https://www.anaconda.com/download/}.
+A number of Python scripts are used during the installation of NEXD 2D and as an aid in the creation of input files. To run those, a Python version (recommended 2.7, or 3.6 or higher) is required. A good and easy way to get Python is to install it via the Anaconda distribution, which is available for Windows, MacOS and Linux. It can be downloaded under \url{https://www.anaconda.com/download/}.
 
 \section{Installation}
 To install the software, follow these steps:
@@ -46,12 +46,13 @@ To install the software, follow these steps:
     \item Install all software dependencies.
     \item Adjust the software to your system and personal requirements by changing the Makefile appropriately (e.g., change the path to your METIS installation and set your compiler, see code listing \ref{lis:make2}).
     \item Compile METIS.
-    \item Compile NEXD using the command "make all" in your console from your installation directory.
+    \item Compile NEXD using the command ``make all'' in your console from your installation directory.
 \end{enumerate}
 
 \section{Changing the Makefile}
 \label{subsec:changeMake}
-    As mentioned in step three (3) in the instruction on how to run the software, the Makefile needs to be changed at certain position. The following sections need to be adjusted by the user: \\
+    As mentioned in step 3 of the instruction on how to install the software, the Makefile needs to be changed at certain position. The following sections need to be adjusted by the user:
+    
     \lstinputlisting[
         float=h, 
         captionpos=b, 
@@ -62,10 +63,10 @@ To install the software, follow these steps:
         lastline=34,
         breaklines=true,
         postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}
-    ]{source_files/Makefile.txt} \\
-    Change these lines to select the compiler. The default compiler flags are set for optimum performance of the user and need not be adjusted. Recommended flags for developers are given in the comments given in the Makefile. Please review the Makefile for more information.  \\  
-    \\
-    Please adjust the path to your METIS library specified in the code listing \ref{lis:make2}.
+    ]{source_files/Makefile.txt}
+    Change these lines to select the compiler. The default compiler flags are set for optimum performance of the user and need not be adjusted. Recommended flags for developers are given by the comments in the Makefile. Please review the Makefile for more information.
+    
+    Please adjust the path to your METIS library as specified in the code listing \ref{lis:make2}.
     \lstinputlisting[
         float=ht, 
         captionpos=b, 
@@ -80,8 +81,9 @@ To install the software, follow these steps:
 \newpage
 \section{Clean installation directory}
 \label{sec:cleansimdirc}
-Below a clean tree for the installation directory with all sub-folders is shown. \\
-\\
+Below a clean tree for the installation directory with all sub-folders is shown.
+
+{\footnotesize
 \begin{forest}
  pic dir tree,
   where level=0{}{% folder icons by default; override using file for file icons
@@ -91,15 +93,23 @@ Below a clean tree for the installation directory with all sub-folders is shown.
 	[doc, label=right:{Contains all files related to the documentation, including the Latex source files}] 
     [simulations
         [2layer\_pml\_att
-            [cubit, label=right:{Contains the files: 2layer\_pml\_att.jou, cubit2dg.py and run\_cubit.py}]
+            [mesh, label=right:{Contains files related to the mesh}]
             [data, label=right:{Contains the files: parfile, source and stations}]
             [ref
-               [att, label=right:{Contains reference seismograms with attenuation (66 files)}]
-               [no\_att, label=right:{Contains reference seismograms without attenuation (66 files)}]
+               [att, label=right:{Contains reference seismograms with attenuation and without PMLs (42 files)}]
+               [no\_att, label=right:{Contains reference seismograms without attenuation and without PMLs (42 files)}]
+               [pml, label=right:{Contains reference seismograms without attenuation and with PMLs (42 files)}]
+               [pml\_att, label=right:{Contains reference seismograms with attenuation and with PMLs (42 files)}]
             ]
         ]
+        [example\_inversion
+            [mesh, label=right:{Contains files related to the mesh}]
+            [data, label=right:{Contains the files: parfile, source, stations and invpar}]
+            [ref, label=right:{Contains reference seismograms and .vtk files (22 files)}]
+            [inversion, label=right:{Contains the seismograms obtained from the real model}]
+        ]        
         [example\_linearSlipInterface
-            [cubit, label=right:{Contains the files: lsi.jou, cubit2dg.py and run\_cubit.py}]
+            [mesh, label=right:{Contains files related to the mesh}]
             [data, label=right:{Contains the files: parfile, source, stations, interfaces and fracs}]
             [ref
                 [noPML, label=right:{Contains reference seismograms with PML (60 files)}]
@@ -107,20 +117,19 @@ Below a clean tree for the installation directory with all sub-folders is shown.
             ]
         ]
         [example\_poro
-            [cubit, label=right:{Contains the files: example\_poro.jou, matpropporo, cubit2dg.py and run\_cubit.py}]
+            [mesh, label=right:{Contains files related to the mesh}]
             [data, label=right:{Contains the files: parfile, source and stations}]
             [ref, label=right:{Contains reference seismograms (178 Files)}]
             [tools, label=right:{Contains Matlab Code to calculate velocities and required element size.}]
         ]
         [lambs
-            [cubit, label=right:{Contains the files: lambs.jou, cubit2dg.py and run\_cubit.py}]
+            [mesh, label=right:{Contains files related to the mesh}]
             [data, label=right:{Contains the files: parfile, source and stations}]
             [ref, label=right:{Contains reference seismograms and a README (13 Files)}]    
         ]
     ]
     [src, label=right:Contains all fortran source files]
     [tools
-        [python, label=right:Contains a number of python scripts]
         [scripts, label=right:Contains a number of python scripts]
     ]
     [LICENSE, file]
@@ -128,5 +137,6 @@ Below a clean tree for the installation directory with all sub-folders is shown.
     [Readme.md, file] 
 ]
 \end{forest}
+}
 \\
 For the remaining part of the manual the NEXD 2D installation directory will be referred to as \url{dg2d}.

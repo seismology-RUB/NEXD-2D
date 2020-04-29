@@ -1,7 +1,8 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -34,15 +35,23 @@ program movie_pro
     !Create new error message for this program
     call new(errmsg, myname)
 
+    call writeLogo()
+
     ! read Parfile
     call readParfile(par, lsipar, movie, myrank, errmsg)
     if (.level.errmsg == 2) then; call print(errmsg); stop; endif
 
     if (par%log) then
+       write (*, "(a80)") "|------------------------------------------------------------------------------|"
        write (*, "(a80)") "|             Generate single movie files for mpi version of dg2d              |"
        write (*, "(a80)") "|------------------------------------------------------------------------------|"
     end if
 
-    call collectMovie(par, movie, errmsg)
-
-end program movie_pro
+    call collectMovie(par, movie, 1, errmsg)
+    
+    if (par%log) then
+        write(*,'(a80)') "|------------------------------------------------------------------------------|"
+        write(*,'(a80)') "|                               end NEXD2D movie                               |"
+        write(*,'(a80)') "|------------------------------------------------------------------------------|"
+    end if
+end program

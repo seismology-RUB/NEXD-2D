@@ -72,11 +72,11 @@ for folder in dirs:                                       # loop through folders
         matchlist = search_text_file(datei,'\tuse (\w+)')
         if len(matchlist) != 0:
             entry = build_makefile_entry(datei, matchlist,'.o')
-            print entry
+            print(entry)
         matchlist = search_text_file(datei,'^ {2,4}use (\w+)')
         if len(matchlist) != 0:
             entry = build_makefile_entry(datei, matchlist,'.o')
-            print entry
+            print(entry)
 #
 #  search for include statements in f-files, either tab or four blanks
 #
@@ -84,11 +84,11 @@ for folder in dirs:                                       # loop through folders
         matchlist = search_text_file(datei,'\tinclude \'(\w+)')
         if len(matchlist) != 0:
             entry = build_makefile_entry(datei, matchlist,'.h')
-            print entry
+            print(entry)
         matchlist = search_text_file(datei,'    include \'(\w+)')
         if len(matchlist) != 0:
             entry = build_makefile_entry(datei, matchlist,'.h')
-            print entry
+            print(entry)
 #
 #  search for include statements in .f.m4-files
 #
@@ -96,4 +96,4 @@ for folder in dirs:                                       # loop through folders
         matchlist = search_text_file(datei,'\tinclude \'(\w+)')
         if len(matchlist) != 0:
             entry = build_makefile_entry(datei, matchlist,'.h')
-            print entry
+            print(entry)

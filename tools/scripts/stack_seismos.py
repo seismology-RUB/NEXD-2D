@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #-----------------------------------------------------------------------
-#   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
 #
 #   This file is part of NEXD 2D.
 #
@@ -29,10 +29,10 @@ def stack_seismos(root, component, datatype):
     chan_conv = dict(X='1', Y='2', Z='3', R='R', T='T')
 
     files = glob.glob1(root, fpattern)
-
+    print(files)
     outfile = 'seismo.' + component + '.stacked.sds' + datatype
 
-    output = open(outfile, 'w', 0)
+    output = open(outfile, 'w')
     i = 0
     for file in files:
         data = np.loadtxt(file)

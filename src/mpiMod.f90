@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2015-2019 Andre Lamert (Ruhr-Universität Bochum, GER)
+!   Copyright 2015-2020 Andre Lamert (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -213,6 +213,45 @@ module mpiMod
         endif
     end subroutine sum_int
 
+    ! call MPI_reduce to receive the sum of a dataset
+    subroutine sum_int_all(send, rec)
+        implicit none
+
+        integer :: send, rec
+        integer :: ierr
+
+        call MPI_ALLREDUCE(send,rec,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call check_ierr(ierr,"Error in MPI_ALLREDUCE, sum_int_all")
+    end subroutine sum_int_all
+
+     subroutine sum_real_allDP(send, rec)
+        implicit none
+
+        real(kind=SIZE_DOUBLE) :: send, rec
+        integer :: ierr
+
+        call MPI_ALLREDUCE(send,rec,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call check_ierr(ierr,"Error in MPI_REDUCE, sum_real_all")
+    end subroutine sum_real_allDP
+
+    subroutine minval_real_all(send, rec,type_size)
+        implicit none
+
+        real(kind=CUSTOM_REAL) :: send, rec
+        integer :: ierr,type_size
+
+        if (type_size==SIZE_REAL) then
+            call MPI_ALLREDUCE(send,rec,1,MPI_REAL,MPI_MIN,MPI_COMM_WORLD,ierr)
+            call check_ierr(ierr,"Error in MPI_REDUCE, minval_real")
+        else if (type_size==SIZE_DOUBLE) then
+            call MPI_ALLREDUCE(send,rec,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD,ierr)
+            call check_ierr(ierr,"Error in MPI_REDUCE, minval_real")
+        else
+            write(*,*) 'Size of CUSTOM_REAL is not supported, see constants.h file!'
+            call check_ierr(ierr,"Error in MPI_REDUCE, minval_real")
+        endif
+    end subroutine minval_real_all
+
     ! call MPI_finalize to stop MPI
     subroutine finalize_mpi()
         implicit none
@@ -245,4 +284,4 @@ module mpiMod
             call stop_mpi()
         end if
     end subroutine check_ierr
-end module mpiMod
+end module

@@ -1,0 +1,17 @@
+|-----------------------------------------------------------------------|
+|                             starting timeloop...                      |
+|                     Iteration number:            3                    |
+|                               Source:      2 of  2                    |
+|                           Run number:            2                    |
+|                      Simulation type:      forward                    |
+|                            Time step:  4.88473E-05                    |
+|                 Number of time steps:         6000                    |
+|                 Total simulated time:  2.93084E-01                    |
+|-----------------------------------------------------------------------|
+| Finished first test forward simulation for source   2                 |
+| Calculation time   235.3 seconds, total computation time: 1.5 hours   |
+|                                                                       |
+| Change model and start second test forward simulation                 |
+| Smallest vp/vs ratio: 1.41                                            |
+| New time step:  4.88468E-05, with highest velocity: 1125.531          |
+|-----------------------------------------------------------------------|

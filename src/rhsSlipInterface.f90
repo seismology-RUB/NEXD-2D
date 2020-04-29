@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------
-!   Copyright 2014-2019 Thomas Möller (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Thomas Möller (Ruhr-Universität Bochum, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -217,7 +217,7 @@ module rhsSlipInterface
                     if (lsipar%normal) then
                         call rhsJump(zin_vp, zout_vp, &
                                      lsi_spec(etolsi(element)%lsiprop(surface))%type, &
-                                     lsi_spec(etolsi(element)%lsiprop(surface))%eta_vp, &
+                                     lsi_spec(etolsi(element)%lsiprop(surface))%nu_n, &
                                      lsi%rhsS_n(surface,i), lsi%S_n(surface,i), &
                                      -dV(i,1), rot_rhsQ_surface(i,1), errmsg)
                     endif
@@ -225,7 +225,7 @@ module rhsSlipInterface
                     if (lsipar%tangential) then
                         call rhsJump(zin_vs, zout_vs, &
                                      lsi_spec(etolsi(element)%lsiprop(surface))%type, &
-                                     lsi_spec(etolsi(element)%lsiprop(surface))%eta_vs, &
+                                     lsi_spec(etolsi(element)%lsiprop(surface))%nu_t, &
                                      lsi%rhsS_t(surface,i), lsi%S_t(surface,i), &
                                      -dV(i,2), rot_rhsQ_surface(i,3), errmsg)
                     end if
@@ -234,23 +234,21 @@ module rhsSlipInterface
         end do
     end subroutine activityFluxSlipInterface
 
-    subroutine rhsJump(zin, zout, type, eta, rhsS, S, dV, Sigma, errmsg)
+    subroutine rhsJump(zin, zout, type, nu, rhsS, S, dV, Sigma, errmsg)
         !This subourtine contains the equations necessary for the calculation of the rhs of the jump function
         !input
         type(error_message) :: errmsg
         character(len=*), intent(in) :: type
         real(kind=custom_real), intent(in) :: zin, zout, S, Sigma
         real(kind=custom_real), intent(in) :: dV
-        real(kind=custom_real), intent(in) :: eta
+        real(kind=custom_real), intent(in) :: nu
         !output
         real(kind=custom_real), intent(out) :: rhsS
         !local
         character(len=15) :: myname = 'rhsLSI - Jump'
-        real(kind=custom_real) :: nu
 
         select case (trim(type))
             case ("elastic")
-                nu   = (zin + zout)/(eta * zin * zout)
                 rhsS = -nu*S + ((zin+zout)/(2*zin*zout))*(Sigma) + 0.5*dV
             case default
                 call add(errmsg,2,"No accepted interface-type entered.",myname, "data/interfaces")

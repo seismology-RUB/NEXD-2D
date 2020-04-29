@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !   Copyright 2011-2016 Lasse Lambrecht (Ruhr-Universität Bochum, GER)
-!   Copyright 2014-2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+!   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 !
 !   This file is part of NEXD 2D.
 !
@@ -30,24 +30,22 @@ module logoMod
         write(*,*) ':::::   with the Nodal Discontinous Galerkin Method    :::::'
         write(*,*) ':::::   written by                                     :::::'
         write(*,*) ':::::                                                  :::::'
-        write(*,*) ':::::                                                  :::::'
         write(*,*) ':::::   Lasse Lambrecht                                :::::'
         write(*,*) ':::::   Wolfgang Friederich                            :::::'
         write(*,*) ':::::   Andre Lamert                                   :::::'
         write(*,*) ':::::   Thomas Möller                                  :::::'
         write(*,*) ':::::   Marc S. Boxberg                                :::::'
-        write(*,*) ':::::   Ruhr-Universität Bochum 2011 - 2019            :::::'
+        write(*,*) ':::::   Ruhr-Universität Bochum 2011 - 2020            :::::'
         write(*,*) ':::::                                                  :::::'
         write(*,*) '::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'
         write(*,*) '::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'
-        write(*,*) '::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'
-        write(*,*) ':::::::::::::wwwwwwwwwas::::wwwc::::=vwwa::awaauwwwa/:::::::'
-        write(*,*) ':::::::::::::QQQPT?T?$QQm:::QQQf::::=jQQZ::##:::::::Qs::::::'
-        write(*,*) ':::::::::::::QQQf:::::QWQL::QQQf::::=3QQ#::ZW::::::<W"::::::'
-        write(*,*) ':::::::::::::QQQL=isawWQQ(::QQQf::::=3QQZ::#QowwwmQQ>:::::::'
-        write(*,*) ':::::::::::::QQQf:9WWQ@?^:::QQQL::::<dQQZ::Z#::::::+$g::::::'
-        write(*,*) ':::::::::::::QQQf::)BQWmc:::4QQQas<ayQQ@+::#W:::::::mQ::::::'
-        write(*,*) ':::::::::::::QQQf::::)QQWw:::?VQQQQQW@?~:::UmwawawwU?:::::::'
+        write(*,*) '::::::::::::::wwwwwwwwwas::::wwwc::::=vwwa::awaauwwwa/::::::'
+        write(*,*) '::::::::::::::QQQPT?T?$QQm:::QQQf::::=jQQZ::##:::::::Qs:::::'
+        write(*,*) '::::::::::::::QQQf:::::QWQL::QQQf::::=3QQ#::ZW::::::<W":::::'
+        write(*,*) '::::::::::::::QQQL=isawWQQ(::QQQf::::=3QQZ::#QowwwmQQ>::::::'
+        write(*,*) '::::::::::::::QQQf:9WWQ@?^:::QQQL::::<dQQZ::Z#::::::+$g:::::'
+        write(*,*) '::::::::::::::QQQf::)BQWmc:::4QQQas<ayQQ@+::#W:::::::mQ:::::'
+        write(*,*) '::::::::::::::QQQf::::)QQWw:::?VQQQQQW@?~:::UmwawawwU?::::::'
         write(*,*) '::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'
         write(*,*) '::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'
         write(*,*)

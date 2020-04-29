@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # -----------------------------------------------------------------------
-#   Copyright 2019 Marc S. Boxberg (Ruhr-Universität Bochum, GER)
+#   Copyright 2014-2020 Marc S. Boxberg (RWTH Aachen University, GER)
 #   Copyright 2019 Kaan Cökerim (Ruhr-Universität Bochum, GER)
 #
 #   This file is part of NEXD 2D.
@@ -116,7 +116,7 @@ def read_stations_file(file):
 
 
 def read_nexd_2d_seismogram(root, source, x_rec, z_rec, component, data_type, number, shotpoint_number, scaling=-100,
-                            starttime=UTCDateTime(2019, 1, 1, 0, 0, 0, 0), resampling_rate=None, SNR=None):
+                            starttime=UTCDateTime(2019, 1, 1, 0, 0, 0, 0), resampling_rate=None):
     if scaling > 0:
         scale = 1 / scaling
     elif scaling < 0:
@@ -140,25 +140,6 @@ def read_nexd_2d_seismogram(root, source, x_rec, z_rec, component, data_type, nu
         print('resample (too many points) to {:f}'.format(tr.stats.sampling_rate / factor))
         tr.resample(tr.stats.sampling_rate / factor)
 
-    if SNR:
-        #creating array with signal energies
-        Psig = tr.data**2
-        
-        # calculating average signal power as the root mean square of the energy array
-        avg_Psig = np.mean(Psig)
-        
-        #  Pnoise = Psig / SNR
-        avg_Pnoise = avg_Psig / SNR
-        # creating normal distributed noise sample:
-        # For a Gaussian random variable X, the average power E[X^2] is E[X^2] = mu^2 + sigma^2
-        # mu = mean; sigma = standard deviation
-        # for white noise, mu = 0 and the average power is then equal to the variance sigma^2.
-        mean_noise = 0
-        noise = np.random.normal(mean_noise, np.sqrt(avg_Pnoise), tr.stats.npts) # 1: mean, 2: standard deviation, 3: length of noise array
-
-        # adding noise to pure signal
-        tr.data += noise
-
     tr.data = np.require(tr.data, dtype=np.float32)
 
     if not hasattr(tr.stats, 'segy.trace_header'):
@@ -181,6 +162,34 @@ def read_nexd_2d_seismogram(root, source, x_rec, z_rec, component, data_type, nu
     tr.stats.segy.trace_header.x_coordinate_of_ensemble_position_of_this_trace = int(x_rec * scale)
 
     return tr
+
+
+def add_noise(stream, SNR=None):
+    st = stream.copy()
+    
+    Psig = []
+    for tr in st:
+        #creating array with signal energies
+        Psig.extend(tr.data**2)
+        
+    # calculating average signal power as the root mean square of the energy array
+    avg_Psig = np.sqrt(np.mean(np.array(Psig)))
+    
+    #  Pnoise = Psig / SNR
+    avg_Pnoise = avg_Psig / SNR
+    
+    for tr in stream:
+        # creating normal distributed noise sample:
+        # For a Gaussian random variable X, the average power E[X^2] is E[X^2] = mu^2 + sigma^2
+        # mu = mean; sigma = standard deviation
+        # for white noise, mu = 0 and the average power is then equal to the variance sigma^2.
+        mean_noise = 0
+        noise = np.random.normal(mean_noise, avg_Pnoise, tr.stats.npts) # 1: mean, 2: standard deviation, 3: length of noise array
+
+        # adding noise to pure signal
+        tr.data += noise
+    
+    return st
 
 
 def read_nexd_2d_source(root, source, scaling=-100, starttime=UTCDateTime(2019, 1, 1, 0, 0, 0, 0), resampling_rate=None):
@@ -239,7 +248,10 @@ def read_nexd_2d_survey(root, out, component, data_type, shotpoint_number=1, res
                                                                                 station[1], len(str(len(stations)))))
         st.append(read_nexd_2d_seismogram(root=os.path.join(root, 'out'), source=source, x_rec=station[0],
                                           z_rec=station[1], component=component, data_type=data_type, number=station_id,
-                                          shotpoint_number=shotpoint_number, resampling_rate=resampling_rate, SNR=SNR))
+                                          shotpoint_number=shotpoint_number, resampling_rate=resampling_rate))
+
+    if SNR:
+        st = add_noise(stream=st, SNR=SNR)
 
     st.stats = AttribDict()
     st.stats.textual_file_header = 'Textual Header!'

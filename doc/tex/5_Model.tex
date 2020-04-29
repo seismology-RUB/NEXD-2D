@@ -17,14 +17,18 @@
     ]{source_files/lsi.jou}
     
     	The reset command at the beginning resets the current environment to its default condition. It is highly recommended to use this command ahead of each run.
-    	Lines 5 - 14 list the commands that are used to create the model (the geometric shape). \\		
-    	  	
-    	\fcolorbox{red}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Warning}: If the model is created using vertex points (like this example) the user has to pay attention on how the surfaces are created. The normal of all surfaces must point in the same outward direction. Otherwise an error is raised n the when "mesher" is run called \emph{\textbf{Jacobian < 0}}. The easiest way avoid this error, is to create the surface by calling the points anticlockwise according to their coordinates (see lines 13 -14).}} \\
+    	Lines 5 - 14 list the commands that are used to create the model (the geometric shape).	
+
+	\medskip
+    	\fcolorbox{red}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Warning}: If the model is created using vertex points (like this example) the user has to pay attention on how the surfaces are created. The normal of all surfaces must point in the same outward direction. Otherwise an error is raised n the when ``mesher'' is run called \emph{\textbf{Jacobian < 0}}. The easiest way avoid this error, is to create the surface by calling the points anticlockwise according to their coordinates (see lines 13 -14).}}
     	
-    	Lines 17 - 19 are optional and are only needed if PML are to be used. They create the PML layer by cutting it from the original volume. \\
-		\\    	
-    	\fcolorbox{red}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Attention}: If PMLs are to be included in the model, they have to be of uniform thickness. Nonuniform thickness of PMLs is currently not supported and creation of such will result in errors.}} \\
+    	\medskip
+    	Lines 17 - 19 are optional and are only needed if PML are to be used. They create the PML layer by cutting it from the original volume.
     	
+    	\medskip
+    	\fcolorbox{red}{white}{\parbox{\textwidth-2\fboxsep-2\fboxrule}{\textbf{Attention}: If PMLs are to be included in the model, they have to be of uniform thickness. Nonuniform thickness of PMLs is currently not supported and creation of such will result in errors.}}
+    	
+    	\medskip
     	Lines 26 - 30 describe the meshing process. Usually the only portion to be adjusted here is the size of the elements. This is done in line 28 in this example. The unit of this number is meters.
     	
     	Next, the materials are defined. In Lines 37 and 38 each block is assigned a number of surfaces. They are assigned by number which are given to the surfaces by Trelis.
@@ -36,7 +40,7 @@
     	
     \section{Prepare the input files}
     \label{sec:prepinput}
-    	The relevant input files are created by running the script "run\_cubit.py". This scripts loads all necessary modules and calls the script "cubit2dg2d.py". The script requires the file "cubit2dg2d.py" to be present in the folder it is executed from, or line 12 (reload command) needs to be modified with the correct path to the file. 
+    	The relevant input files are created by running the script ``run\_cubit.py''. This scripts loads all necessary modules and calls the script ``cubit2dg2d.py''. The script requires the file ``cubit2dg2d.py'' to be present in the folder it is executed from, or line 12 (reload command) needs to be modified with the correct path to the file. 
     	\lstinputlisting[
     	language = python,
     float=htp, 
@@ -46,7 +50,7 @@
     breaklines=true,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}    
     ]{source_files/run_cubit.py} \\
-    	Modify line 16 by replacing the name "testtri.cub" by the name that has been assigned to the model (name of the .cub file). 
+    	Modify line 16 by replacing the name ``testtri.cub'' by the name that has been assigned to the model (name of the .cub file). 
     \section{Using a different meshing tool}
 	\label{sec:diffmesh}
 		Currently no other meshing tool is supported by the developers. If a user is not able to use the supported meshing software he/she is asked to create the relevant input files from the output of his/her own meshing software.     	  
