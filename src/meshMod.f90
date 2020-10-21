@@ -585,9 +585,6 @@ module meshMod
             end do
         end do
 
-        deallocate(absorb_nodes)
-        deallocate(free_nodes)
-
         !"--------------------------------------------------------------------------------------"
         ! create boundray nodes association for single mesh
         !"--------------------------------------------------------------------------------------"
@@ -1516,6 +1513,8 @@ module meshMod
                 call writeMeshVar(db(iproc),trim(outpath)//filename)
                 call deallocMeshVar(db(iproc))
             end do !nproc create databases
+            deallocate(absorb_nodes)
+            deallocate(free_nodes)
         end if ! par%nproc >1
 
         !"--------------------------------------------------------------------------------------"
